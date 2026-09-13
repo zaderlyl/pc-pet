@@ -37,6 +37,7 @@ const Brain = {
   gemScene: { name: null, start: 0, dur: 0, next: 0 }, // Gemini : spark / swirl / wink / muse
   caScene: { name: null, start: 0, dur: 0, next: 0 },  // Canva : drag / template / pop
   giScene: { name: null, start: 0, dur: 0, next: 0 },  // Git : commit / branch / diff / push
+  figScene: { name: null, start: 0, dur: 0, next: 0 }, // Figma : frames qui s'organisent
   reactions: [],
   idle: { anim: null, start: 0, dur: 0, next: 0 },
   scene: { name: null, start: 0, dur: 0, next: 0 },
@@ -316,6 +317,24 @@ const Brain = {
     if (now > this.giScene.next) this.scheduleGiScene(now);
   },
 
+  // ---- Figma : le collaboratif enthousiaste (les frames s'organisent) ----
+  scheduleFigScene(now) {
+    if (Math.random() < 0.5) {
+      this.figScene = { name: 'frames', start: now, dur: 2600, next: now + 2600 + rnd(4000, 8000) };
+    } else {
+      this.figScene = { name: null, start: now, dur: 0, next: now + rnd(5000, 10000) };
+    }
+  },
+  tickFigScene(now) {
+    if (this.aiTool !== 'figma' || this.reactions.length) {
+      this.figScene = { name: null, start: 0, dur: 0, next: 0 };
+      return;
+    }
+    if (this.figScene.next === 0) { this.scheduleFigScene(now); return; }
+    if (this.figScene.name && now - this.figScene.start > this.figScene.dur) this.figScene.name = null;
+    if (now > this.figScene.next) this.scheduleFigScene(now);
+  },
+
   // ---- VS Code : l'ingénieur méthodique (autocomplete → lint → debug → save) ----
   scheduleVScene(now) {
     if (Math.random() < 0.62) {
@@ -386,6 +405,7 @@ const Brain = {
     this.tickGemScene(now);
     this.tickCaScene(now);
     this.tickGiScene(now);
+    this.tickFigScene(now);
 
     const idl = this.idleSec;
     const batLow = this.battery && !this.battery.charging && this.battery.level < 0.15;
@@ -438,6 +458,9 @@ const Brain = {
       }
       else if (this.aiTool === 'canva') {
         pose = this.caScene.name ? 'canva' + this.caScene.name : 'canva';
+      }
+      else if (this.aiTool === 'figma') {
+        pose = this.figScene.name ? 'figma' + this.figScene.name : 'figma';
       }
       else pose = this.aiTool;
     } else if (this.musicPlaying) {
@@ -496,12 +519,14 @@ const POSE_TINT = {
   vscodedebug: 'vscode', vscodesave: 'vscode',
   canva: 'canva', canvadrag: 'canva', canvatemplate: 'canva', canvapop: 'canva',
   git: 'git', gitcommit: 'git', gitbranch: 'git', gitdiff: 'git', gitpush: 'git',
+  figma: 'figma', figmaframes: 'figma',
 };
 
 // nom de la facette affiché au-dessus du compagnon
 const IDENTITY_NAME = {
   claude: 'Laudi', vscode: 'Codi', chatgpt: 'Gepti', gemini: 'Gemi',
   affinity: 'Arti', discord: 'Cordi', youtube: 'Tubi', canva: 'Canvi', git: 'Giti',
+  figma: 'Figmi',
 };
 const ACTIVITY_NAME = {
   code: 'Hacki', terminal: 'Hacki', web: 'Webi', design: 'Desi',
@@ -523,6 +548,8 @@ const TINTS = {
   canva:    { bg: '4,24,28',   off: '0,196,204,0.13',   lit: '170,240,244', glow: '0,196,204,0.9' },
   // Git / GitHub : ardoise GitHub #0d1117, lueur bleu-lien
   git:      { bg: '13,17,23',  off: '139,148,158,0.15', lit: '176,190,205', glow: '88,166,255,0.6' },
+  // Figma : orange/or (couleur "F" du logo)
+  figma:    { bg: '26,16,6',   off: '255,170,60,0.13',  lit: '255,224,180', glow: '255,140,40,0.9' },
 };
 
 const cv = document.getElementById('pet');

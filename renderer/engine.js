@@ -682,6 +682,18 @@ function drawCreature(s, t) {
         extras.push({ kind:'popswatch', ph: t });
         break;
       }
+      // ---- Figma : le collaboratif enthousiaste — jongle entre les frames ----
+      case 'figma': {           // base : suit les composants du regard
+        eyeStyle = 'arc'; mouth = 'smile';
+        lookH = Math.sin(t * 1.1) * 1.8;
+        tilt = Math.sin(t * 0.5) * 0.04;
+        break;
+      }
+      case 'figmaframes': {     // les frames s'organisent en grille, il valide
+        eyeStyle = 'sparkle'; mouth = 'grin'; blush = true;
+        extras.push({ kind:'tiles', ph: t });
+        break;
+      }
       // ---- Git / GitHub : le gardien de l'histoire — il archive, surveille le
       //      graphe des branches, valide chaque instantané avec soin ----
       case 'git': {             // base : posé, il regarde le graphe des commits défiler
