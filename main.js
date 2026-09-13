@@ -481,6 +481,7 @@ function createWindow() {
     width: size, height: size + NAMEPLATE_H, x, y,
     frame: false, transparent: true, resizable: false, movable: true,
     alwaysOnTop: true, skipTaskbar: true, hasShadow: false, fullscreenable: false,
+    focusable: false, acceptFirstMouse: true,
     webPreferences: { preload: path.join(__dirname, 'preload.js') },
   });
   win.setAlwaysOnTop(true, 'screen-saver');
@@ -565,13 +566,21 @@ function buildTray() {
 function toggleShow() {
   if (!win) return;
   if (win.isVisible()) { win.hide(); cfg.hidden = true; }
-  else { win.show(); cfg.hidden = false; }
+  else { win.show(); cfg.hidden = false; keepTreatsOnTop(); }
   saveCfg();
 }
 
 function relaunchWindow() {
   if (win) { win.removeAllListeners('moved'); win.close(); win = null; }
   createWindow();
+  keepTreatsOnTop();
+}
+
+// L'étagère (et l'étiquette de nom au survol qu'elle affiche) doit toujours
+// passer devant le compagnon, jamais derrière — sinon le nom des friandises
+// se retrouve caché quand le compagnon est posé juste à côté.
+function keepTreatsOnTop() {
+  if (treatsWin) treatsWin.moveTop();
 }
 
 ipcMain.on('drag', (_e, { dx, dy }) => {
@@ -601,6 +610,7 @@ function createTreatsWindow() {
   treatsWin.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
   treatsWin.setIgnoreMouseEvents(true, { forward: true });
   treatsWin.loadFile(path.join(__dirname, 'renderer', 'treats.html'));
+  keepTreatsOnTop();
   treatsWin.webContents.on('console-message', (_e, l, m, ln, src) =>
     console.log(`[treats] ${m} (${src}:${ln})`));
   treatsWin.on('closed', () => { treatsWin = null; });
