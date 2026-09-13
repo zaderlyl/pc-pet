@@ -50,10 +50,13 @@ Taille, **Fond**, **Galerie des emotes…**, Quitter. On déplace le perso en le
 | Batterie < 15 % (sur secteur = non) | énervé · Branchement secteur → content |
 | Décembre / janvier | bonnet de Père Noël |
 
-**Écran scindé** : quand deux fenêtres se partagent l'écran, le compagnon ne
-saute plus d'une identité à l'autre — il garde la **plus « logique »** des deux
-vues dans les 5 dernières secondes (VS Code + Chrome → Codi). Priorité :
-Codi > Giti > Laudi > Arti > Canvi > Gemi > Gepti > Cordi > Tubi.
+**Écran scindé / plusieurs fenêtres ouvertes** : le compagnon ne saute plus
+d'une identité à l'autre au gré du focus. Certaines applis **priment tant
+qu'elles sont ouvertes**, peu importe où est le focus (ex. Claude ouvert sur
+un écran → le compagnon reste sur Laudi même en travaillant sur VS Code, sur
+l'autre écran). Priorité : Laudi > Codi > Giti > Arti > Canvi > Gepti > Cordi > Tubi.
+Pour ce qui n'a pas d'appli native détectable (navigateur, Gemi) : repli sur
+l'identité la plus « logique » vue dans les 5 dernières secondes de focus.
 
 ### Permissions
 
