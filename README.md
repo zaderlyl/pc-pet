@@ -50,13 +50,18 @@ Taille, **Fond**, **Galerie des emotes…**, Quitter. On déplace le perso en le
 | Batterie < 15 % (sur secteur = non) | énervé · Branchement secteur → content |
 | Décembre / janvier | bonnet de Père Noël |
 
-**Écran scindé / plusieurs fenêtres ouvertes** : le compagnon ne saute plus
+**Écran scindé (Split View) ou deux écrans** : le compagnon ne saute plus
 d'une identité à l'autre au gré du focus. Certaines applis **priment tant
-qu'elles sont ouvertes**, peu importe où est le focus (ex. Claude ouvert sur
-un écran → le compagnon reste sur Laudi même en travaillant sur VS Code, sur
-l'autre écran). Priorité : Laudi > Codi > Giti > Arti > Canvi > Gepti > Cordi > Tubi.
-Pour ce qui n'a pas d'appli native détectable (navigateur, Gemi) : repli sur
-l'identité la plus « logique » vue dans les 5 dernières secondes de focus.
+qu'elles partagent vraiment l'écran avec celle au premier plan** (ex. Claude
+d'un côté, VS Code de l'autre en Split View, ou chacun sur son écran →
+le compagnon reste sur Laudi même en travaillant sur VS Code). Priorité :
+Laudi > Codi > Giti > Arti > Canvi > Gepti > Cordi > Tubi.
+Cette priorité **ne s'applique que dans ce cas précis** : si Claude tourne
+juste en arrière-plan (masqué, réduit, ou simplement caché derrière une
+appli qui occupe tout l'écran), il ne prime jamais — le compagnon suit
+alors l'appli réellement au premier plan. Pour ce qui n'a pas d'appli
+native détectable (navigateur, Gemi) : repli sur l'identité la plus
+« logique » vue dans les 5 dernières secondes de focus.
 
 ### Permissions
 
