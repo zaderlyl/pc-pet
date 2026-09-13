@@ -455,8 +455,11 @@ const Brain = {
         layer = 1; pose = 'rest';
       }
     }
+    // une interaction (caresse, astuce, friandise...) n'a pas sa propre
+    // teinte : elle garde celle de l'identité en cours plutôt que de
+    // retomber sur le neutre le temps de l'animation.
     return {
-      layer, pose, phase, tint: POSE_TINT[pose] || null,
+      layer, pose, phase, tint: POSE_TINT[pose] || POSE_TINT[this.aiTool] || null,
       mode: this.dayMode(), decor: this.decor(),
       energy: this.energy, collapseStart: 0,
     };

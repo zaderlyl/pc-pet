@@ -123,10 +123,12 @@ function aiToolOf(appName, url, title) {
 
 // ---- verrouillage d'identité --------------------------------------------
 // Contrairement au lissage ci-dessus (qui ne regarde que les 5 dernières
-// secondes de focus), ici on regarde qui est OUVERT, peu importe le focus
-// actuel. Objectif : si Claude est ouvert sur un écran, le compagnon reste
-// sur "claude" même quand on va travailler sur le second écran. L'ordre de
-// la liste fait la priorité (le premier ouvert trouvé gagne).
+// secondes de focus), ici on regarde qui est visible À L'ÉCRAN EN MÊME TEMPS
+// que l'appli au premier plan — mais UNIQUEMENT quand c'est vraiment le cas
+// (écran scindé / Split View, ou deux écrans physiques). Une appli qui
+// n'est pas au premier plan ET pas visible à l'écran (masquée ⌘H, réduite,
+// ou simplement cachée derrière l'appli au 1er plan si celle-ci occupe tout
+// l'écran) ne doit JAMAIS primer. L'ordre de la liste fait la priorité.
 const LOCK_APPS = [
   { tool: 'claude', names: ['Claude'] },
   { tool: 'vscode', names: ['Code', 'Code - Insiders', 'VSCodium'] },
@@ -138,20 +140,67 @@ const LOCK_APPS = [
   { tool: 'youtube', names: ['YouTube'] },
 ];
 
-// Applis GUI actuellement ouvertes (pas seulement celle au 1er plan).
-function runningGuiApps() {
+// Applis GUI avec une fenêtre ouverte (ni masquée ⌘H, ni réduite) : nom +
+// position/taille de cette fenêtre, pour pouvoir juger plus loin si elle
+// partage vraiment l'écran avec l'appli au premier plan.
+function visibleGuiWindows() {
+  const script = `
+    tell application "System Events"
+      set procList to every process whose background only is false
+      set out to ""
+      repeat with p in procList
+        set pname to name of p
+        if visible of p then
+          try
+            repeat with w in windows of p
+              if not (value of attribute "AXMinimized" of w) then
+                set {px, py} to position of w
+                set {pw, ph} to size of w
+                set out to out & pname & ":" & px & ":" & py & ":" & pw & ":" & ph & linefeed
+                exit repeat
+              end if
+            end repeat
+          end try
+        end if
+      end repeat
+      return out
+    end tell`;
   return new Promise((resolve) => {
-    execFile('osascript', ['-e',
-      'tell application "System Events" to get name of every process whose background only is false'],
-      { timeout: 2000 }, (err, out) => resolve(err ? [] : out.split(', ').map((s) => s.trim())));
+    execFile('osascript', ['-e', script], { timeout: 2500 }, (err, out) => {
+      if (err) return resolve([]);
+      const rows = out.split('\n').map((l) => l.trim()).filter(Boolean).map((l) => {
+        const [name, x, y, w, h] = l.split(':');
+        return { name, x: +x, y: +y, w: +w, h: +h };
+      });
+      resolve(rows);
+    });
   });
 }
 
-// Parmi les applis verrouillées actuellement ouvertes, la plus prioritaire
-// (`null` si aucune n'est ouverte → on retombe sur le lissage par focus).
-function lockedIdentity(running) {
+// L'appli `winCandidate` partage-t-elle vraiment l'écran avec l'appli au
+// premier plan (`frontName`) ? Oui si : c'est elle-même le 1er plan, ou
+// elle est sur un écran physique différent, ou le 1er plan n'occupe pas
+// tout son écran (fenêtres côte à côte plausibles, type Split View).
+function sharesScreenWithFront(winCandidate, windows, frontName) {
+  if (!frontName || winCandidate.name === frontName) return true;
+  const frontWin = windows.find((w) => w.name === frontName);
+  if (!frontWin) return true; // pas assez d'info -> ne bloque pas (repli permissif)
+  const displays = screen.getAllDisplays();
+  const displayOf = (w) => displays.find((d) =>
+    w.x >= d.bounds.x && w.x < d.bounds.x + d.bounds.width &&
+    w.y >= d.bounds.y && w.y < d.bounds.y + d.bounds.height);
+  const fd = displayOf(frontWin), ld = displayOf(winCandidate);
+  if (fd && ld && fd.id !== ld.id) return true;                 // deux écrans différents
+  if (fd && frontWin.w < fd.bounds.width * 0.85) return true;   // 1er plan pas plein écran -> tuilage plausible
+  return false; // 1er plan en plein écran sur ce même écran : le reste est masqué derrière
+}
+
+// Parmi les applis verrouillées qui partagent vraiment l'écran avec le 1er
+// plan, la plus prioritaire (`null` sinon → on retombe sur le lissage).
+function lockedIdentity(windows, frontName) {
   for (const { tool, names } of LOCK_APPS) {
-    if (names.some((n) => running.includes(n))) return tool;
+    const w = windows.find((x) => names.includes(x.name));
+    if (w && sharesScreenWithFront(w, windows, frontName)) return tool;
   }
   return null;
 }
@@ -377,14 +426,14 @@ let curAiTool = null;      // outil IA courant (mis à jour par pollSignals)
 let curBrowser = null;     // nom du navigateur au 1er plan, sinon null
 async function pollSignals() {
   if (!win) return;
-  const [name, batt, music, running] = await Promise.all([frontApp(), battery(), musicPlaying(), runningGuiApps()]);
+  const [name, batt, music, windows] = await Promise.all([frontApp(), battery(), musicPlaying(), visibleGuiWindows()]);
   const isBrowser = BROWSERS_SAFARI.includes(name) || BROWSERS_CHROMIUM.includes(name) || name === 'Firefox';
   let url = null, title = null;
   if (isBrowser) [url, title] = await Promise.all([activeUrl(name), frontTitle()]);
   const rawTool = aiToolOf(name, url, title);
   const rawCat = name ? (CAT_OF[name] || 'other') : 'other';
   const { tool: smoothTool, cat } = smoothIdentity(rawTool, rawCat, Date.now());
-  const aiTool = lockedIdentity(running) || smoothTool;
+  const aiTool = lockedIdentity(windows, name) || smoothTool;
   curAiTool = aiTool;
   curBrowser = (BROWSERS_SAFARI.includes(name) || BROWSERS_CHROMIUM.includes(name)) ? name : null;
   if (process.env.PCPET_DEBUG && aiTool !== lastAiLogged) {
@@ -481,6 +530,7 @@ function createWindow() {
     width: size, height: size + NAMEPLATE_H, x, y,
     frame: false, transparent: true, resizable: false, movable: true,
     alwaysOnTop: true, skipTaskbar: true, hasShadow: false, fullscreenable: false,
+    focusable: false, acceptFirstMouse: true,
     webPreferences: { preload: path.join(__dirname, 'preload.js') },
   });
   win.setAlwaysOnTop(true, 'screen-saver');
@@ -499,6 +549,11 @@ function createWindow() {
     const [bx, by] = win.getPosition();
     cfg.x = bx; cfg.y = by; saveCfg();
   });
+}
+
+function openHub() {
+  const hubApp = path.join(__dirname, 'PC Pet Hub.app');
+  shell.openPath(fs.existsSync(hubApp) ? hubApp : path.join(__dirname, 'gallery.html'));
 }
 
 function buildTray() {
@@ -549,10 +604,7 @@ function buildTray() {
       ],
     },
     { type: 'separator' },
-    { label: 'Galerie des emotes…', click: () => {
-      const hubApp = path.join(__dirname, 'PC Pet Hub.app');
-      shell.openPath(fs.existsSync(hubApp) ? hubApp : path.join(__dirname, 'gallery.html'));
-    } },
+    { label: 'Galerie des emotes…', click: openHub },
     { type: 'separator' },
     { label: 'Quitter', role: 'quit' },
   ]));
@@ -563,13 +615,21 @@ function buildTray() {
 function toggleShow() {
   if (!win) return;
   if (win.isVisible()) { win.hide(); cfg.hidden = true; }
-  else { win.show(); cfg.hidden = false; }
+  else { win.show(); cfg.hidden = false; keepTreatsOnTop(); }
   saveCfg();
 }
 
 function relaunchWindow() {
   if (win) { win.removeAllListeners('moved'); win.close(); win = null; }
   createWindow();
+  keepTreatsOnTop();
+}
+
+// L'étagère (et l'étiquette de nom au survol qu'elle affiche) doit toujours
+// passer devant le compagnon, jamais derrière — sinon le nom des friandises
+// se retrouve caché quand le compagnon est posé juste à côté.
+function keepTreatsOnTop() {
+  if (treatsWin) treatsWin.moveTop();
 }
 
 ipcMain.on('drag', (_e, { dx, dy }) => {
@@ -599,6 +659,7 @@ function createTreatsWindow() {
   treatsWin.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
   treatsWin.setIgnoreMouseEvents(true, { forward: true });
   treatsWin.loadFile(path.join(__dirname, 'renderer', 'treats.html'));
+  keepTreatsOnTop();
   treatsWin.webContents.on('console-message', (_e, l, m, ln, src) =>
     console.log(`[treats] ${m} (${src}:${ln})`));
   treatsWin.on('closed', () => { treatsWin = null; });
@@ -615,6 +676,7 @@ ipcMain.handle('pet-bounds', () => {
   return { x: b.x, y: b.y + NAMEPLATE_H, width: b.width, height: b.height - NAMEPLATE_H };
 });
 ipcMain.on('feed', (_e, kind) => { if (win) win.webContents.send('signals', { fed: Date.now(), fedKind: kind }); });
+ipcMain.on('open-hub', openHub);
 
 app.whenReady().then(() => {
   if (app.dock) app.dock.hide();
