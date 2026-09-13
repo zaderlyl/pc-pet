@@ -8,4 +8,5 @@ contextBridge.exposeInMainWorld('pcpet', {
   setClickable: (on) => ipcRenderer.send('treats-clickable', on),
   petBounds: () => ipcRenderer.invoke('pet-bounds'),
   feed: (kind) => ipcRenderer.send('feed', kind),
+  openHub: () => ipcRenderer.send('open-hub'),
 });

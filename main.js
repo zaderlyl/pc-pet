@@ -501,6 +501,11 @@ function createWindow() {
   });
 }
 
+function openHub() {
+  const hubApp = path.join(__dirname, 'PC Pet Hub.app');
+  shell.openPath(fs.existsSync(hubApp) ? hubApp : path.join(__dirname, 'gallery.html'));
+}
+
 function buildTray() {
   const img = nativeImage.createFromDataURL(TRAY_ICON).resize({ width: 18, height: 18 });
   img.setTemplateImage(true);
@@ -549,10 +554,7 @@ function buildTray() {
       ],
     },
     { type: 'separator' },
-    { label: 'Galerie des emotes…', click: () => {
-      const hubApp = path.join(__dirname, 'PC Pet Hub.app');
-      shell.openPath(fs.existsSync(hubApp) ? hubApp : path.join(__dirname, 'gallery.html'));
-    } },
+    { label: 'Galerie des emotes…', click: openHub },
     { type: 'separator' },
     { label: 'Quitter', role: 'quit' },
   ]));
@@ -615,6 +617,7 @@ ipcMain.handle('pet-bounds', () => {
   return { x: b.x, y: b.y + NAMEPLATE_H, width: b.width, height: b.height - NAMEPLATE_H };
 });
 ipcMain.on('feed', (_e, kind) => { if (win) win.webContents.send('signals', { fed: Date.now(), fedKind: kind }); });
+ipcMain.on('open-hub', openHub);
 
 app.whenReady().then(() => {
   if (app.dock) app.dock.hide();
