@@ -725,6 +725,18 @@ function drawCreature(s, t) {
         extras.push({ kind:'popswatch', ph: t });
         break;
       }
+      // ---- Steam : le joueur impatient — parcourt sa bibliothèque ----
+      case 'steam': {           // base : parcourt les jeux, impatient
+        eyeStyle = 'dot'; mouth = 'grin';
+        cy -= Math.abs(wave(t, 1.6)) * 0.8;
+        extras.push({ kind:'tiles', ph: t });
+        break;
+      }
+      case 'steamwin': {        // succès débloqué
+        eyeStyle = 'sparkle'; mouth = 'grin'; blush = true;
+        extras.push({ kind:'stars', t });
+        break;
+      }
       // ---- Git / GitHub : le gardien de l'histoire — il archive, surveille le
       //      graphe des branches, valide chaque instantané avec soin ----
       case 'git': {             // base : posé, il regarde le graphe des commits défiler

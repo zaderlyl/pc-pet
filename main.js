@@ -34,7 +34,7 @@ for (const [cat, apps] of Object.entries(APP_CATEGORIES)) for (const a of apps) 
 // En écran scindé, `frontApp()` alterne entre les 2 fenêtres → le compagnon
 // changeait d'identité sans arrêt. On garde plutôt l'identité "la plus logique"
 // vue dans les 5 dernières secondes (ex. VS Code + Chrome → VS Code).
-const IDENTITY_PRIORITY = ['vscode', 'git', 'claude', 'affinity', 'figma', 'canva', 'adobe', 'notion', 'gemini', 'chatgpt', 'spotify', 'discord', 'youtube'];
+const IDENTITY_PRIORITY = ['vscode', 'git', 'claude', 'affinity', 'figma', 'canva', 'adobe', 'notion', 'gemini', 'chatgpt', 'spotify', 'discord', 'steam', 'youtube'];
 const CAT_PRIORITY = ['design', 'code', 'terminal', 'chat', 'game', 'media', 'web'];
 const SMOOTH_MS = 5000;
 let seenApps = [];   // { tool, cat, ts }
@@ -104,6 +104,7 @@ function aiToolOf(appName, url, title) {
   if (appName === 'Figma') return 'figma';
   if (appName === 'Notion') return 'notion';
   if (appName === 'Spotify') return 'spotify';
+  if (appName === 'Steam' || appName === 'steam_osx') return 'steam';
   if (/Affinity/i.test(appName || '')) return 'affinity';
   if (/^Canva\b/i.test(appName || '')) return 'canva';
   if (/^Adobe\b/i.test(appName || '')) return 'adobe';   // toute la suite -> une seule identité
@@ -151,6 +152,7 @@ const LOCK_APPS = [
   { tool: 'chatgpt', names: ['ChatGPT'] },
   { tool: 'spotify', names: ['Spotify'] },
   { tool: 'discord', names: ['Discord'] },
+  { tool: 'steam', names: ['Steam', 'steam_osx'] },
   { tool: 'youtube', names: ['YouTube'] },
 ];
 

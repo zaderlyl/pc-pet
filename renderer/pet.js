@@ -40,6 +40,7 @@ const Brain = {
   figScene: { name: null, start: 0, dur: 0, next: 0 }, // Figma : frames qui s'organisent
   noScene: { name: null, start: 0, dur: 0, next: 0 },  // Notion : coche une tâche
   adoScene: { name: null, start: 0, dur: 0, next: 0 }, // Adobe : nuancier
+  steScene: { name: null, start: 0, dur: 0, next: 0 }, // Steam : succès débloqué
   reactions: [],
   idle: { anim: null, start: 0, dur: 0, next: 0 },
   scene: { name: null, start: 0, dur: 0, next: 0 },
@@ -373,6 +374,24 @@ const Brain = {
     if (now > this.adoScene.next) this.scheduleAdoScene(now);
   },
 
+  // ---- Steam : le joueur impatient (succès débloqué de temps en temps) ----
+  scheduleSteScene(now) {
+    if (Math.random() < 0.35) {
+      this.steScene = { name: 'win', start: now, dur: 1800, next: now + 1800 + rnd(6000, 12000) };
+    } else {
+      this.steScene = { name: null, start: now, dur: 0, next: now + rnd(7000, 13000) };
+    }
+  },
+  tickSteScene(now) {
+    if (this.aiTool !== 'steam' || this.reactions.length) {
+      this.steScene = { name: null, start: 0, dur: 0, next: 0 };
+      return;
+    }
+    if (this.steScene.next === 0) { this.scheduleSteScene(now); return; }
+    if (this.steScene.name && now - this.steScene.start > this.steScene.dur) this.steScene.name = null;
+    if (now > this.steScene.next) this.scheduleSteScene(now);
+  },
+
   // ---- VS Code : l'ingénieur méthodique (autocomplete → lint → debug → save) ----
   scheduleVScene(now) {
     if (Math.random() < 0.62) {
@@ -446,6 +465,7 @@ const Brain = {
     this.tickFigScene(now);
     this.tickNoScene(now);
     this.tickAdoScene(now);
+    this.tickSteScene(now);
 
     const idl = this.idleSec;
     const batLow = this.battery && !this.battery.charging && this.battery.level < 0.15;
@@ -508,6 +528,9 @@ const Brain = {
       else if (this.aiTool === 'adobe') {
         pose = this.adoScene.name ? 'adobe' + this.adoScene.name : 'adobe';
       }
+      else if (this.aiTool === 'steam') {
+        pose = this.steScene.name ? 'steam' + this.steScene.name : 'steam';
+      }
       else pose = this.aiTool;
     } else if (this.musicPlaying) {
       layer = 3; pose = 'beatbop';
@@ -569,13 +592,14 @@ const POSE_TINT = {
   notion: 'notion', notioncheck: 'notion',
   spotify: 'spotify',
   adobe: 'adobe', adobeswatch: 'adobe',
+  steam: 'steam', steamwin: 'steam',
 };
 
 // nom de la facette affiché au-dessus du compagnon
 const IDENTITY_NAME = {
   claude: 'Laudi', vscode: 'Codi', chatgpt: 'Gepti', gemini: 'Gemi',
   affinity: 'Arti', discord: 'Cordi', youtube: 'Tubi', canva: 'Canvi', git: 'Giti',
-  figma: 'Figmi', notion: 'Noti', spotify: 'Spoti', adobe: 'Adobi',
+  figma: 'Figmi', notion: 'Noti', spotify: 'Spoti', adobe: 'Adobi', steam: 'Steami',
 };
 const ACTIVITY_NAME = {
   code: 'Hacki', terminal: 'Hacki', web: 'Webi', design: 'Desi',
@@ -605,6 +629,8 @@ const TINTS = {
   spotify:  { bg: '6,20,12',   off: '80,220,130,0.12',  lit: '190,255,210', glow: '29,185,84,0.95' },
   // Adobe (suite) : rouge-magenta Creative Cloud
   adobe:    { bg: '24,6,16',   off: '255,90,150,0.13',  lit: '255,205,222', glow: '230,20,110,0.85' },
+  // Steam : bleu #66C0F4
+  steam:    { bg: '8,16,24',   off: '110,190,230,0.12', lit: '200,235,255', glow: '102,192,244,0.9' },
 };
 
 const cv = document.getElementById('pet');
