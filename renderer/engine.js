@@ -694,6 +694,17 @@ function drawCreature(s, t) {
         extras.push({ kind:'tiles', ph: t });
         break;
       }
+      // ---- Notion : le scribe minimaliste — organise ses pages sans bruit ----
+      case 'notion': {          // base : lit/écrit, posé
+        eyeStyle = 'calm'; mouth = 'line';
+        lookV = 0.3 + Math.sin(t * 0.5) * 0.2;
+        break;
+      }
+      case 'notioncheck': {     // coche une tâche, satisfait
+        eyeStyle = 'arc'; mouth = 'smile'; blush = true;
+        extras.push({ kind:'checkbox', ph: t });
+        break;
+      }
       // ---- Git / GitHub : le gardien de l'histoire — il archive, surveille le
       //      graphe des branches, valide chaque instantané avec soin ----
       case 'git': {             // base : posé, il regarde le graphe des commits défiler
@@ -1834,6 +1845,19 @@ function drawExtra(e, cx, cy, bw, bh, t, b, rot) {
         if (x < cx - 5.2 || x > cx + 5.2) continue;
         const sel = Math.abs(x - cx) < 0.9;
         disc(x, y, sel ? 0.8 : 0.55, b * (sel ? 1 : 0.5));
+      }
+      break;
+    }
+    case 'checkbox': {                        // case à cocher qui se coche (Notion)
+      const p = e.ph ?? t, q = (p * 0.9) % 1;
+      const x0 = cx - 0.8, y0 = cy + bh + 1.4, s = 1.6;
+      strokeLine(x0, y0, x0 + s, y0, 0.22, b * 0.5);
+      strokeLine(x0 + s, y0, x0 + s, y0 + s, 0.22, b * 0.5);
+      strokeLine(x0 + s, y0 + s, x0, y0 + s, 0.22, b * 0.5);
+      strokeLine(x0, y0 + s, x0, y0, 0.22, b * 0.5);
+      if (q > 0.35) {                         // se coche
+        strokeLine(x0 + 0.25, y0 + 0.9, x0 + 0.65, y0 + 1.3, 0.3, b);
+        strokeLine(x0 + 0.65, y0 + 1.3, x0 + 1.35, y0 + 0.3, 0.3, b);
       }
       break;
     }

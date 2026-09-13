@@ -38,6 +38,7 @@ const Brain = {
   caScene: { name: null, start: 0, dur: 0, next: 0 },  // Canva : drag / template / pop
   giScene: { name: null, start: 0, dur: 0, next: 0 },  // Git : commit / branch / diff / push
   figScene: { name: null, start: 0, dur: 0, next: 0 }, // Figma : frames qui s'organisent
+  noScene: { name: null, start: 0, dur: 0, next: 0 },  // Notion : coche une tâche
   reactions: [],
   idle: { anim: null, start: 0, dur: 0, next: 0 },
   scene: { name: null, start: 0, dur: 0, next: 0 },
@@ -335,6 +336,24 @@ const Brain = {
     if (now > this.figScene.next) this.scheduleFigScene(now);
   },
 
+  // ---- Notion : le scribe minimaliste (coche une tâche de temps en temps) ----
+  scheduleNoScene(now) {
+    if (Math.random() < 0.4) {
+      this.noScene = { name: 'check', start: now, dur: 2000, next: now + 2000 + rnd(5000, 10000) };
+    } else {
+      this.noScene = { name: null, start: now, dur: 0, next: now + rnd(6000, 12000) };
+    }
+  },
+  tickNoScene(now) {
+    if (this.aiTool !== 'notion' || this.reactions.length) {
+      this.noScene = { name: null, start: 0, dur: 0, next: 0 };
+      return;
+    }
+    if (this.noScene.next === 0) { this.scheduleNoScene(now); return; }
+    if (this.noScene.name && now - this.noScene.start > this.noScene.dur) this.noScene.name = null;
+    if (now > this.noScene.next) this.scheduleNoScene(now);
+  },
+
   // ---- VS Code : l'ingénieur méthodique (autocomplete → lint → debug → save) ----
   scheduleVScene(now) {
     if (Math.random() < 0.62) {
@@ -406,6 +425,7 @@ const Brain = {
     this.tickCaScene(now);
     this.tickGiScene(now);
     this.tickFigScene(now);
+    this.tickNoScene(now);
 
     const idl = this.idleSec;
     const batLow = this.battery && !this.battery.charging && this.battery.level < 0.15;
@@ -461,6 +481,9 @@ const Brain = {
       }
       else if (this.aiTool === 'figma') {
         pose = this.figScene.name ? 'figma' + this.figScene.name : 'figma';
+      }
+      else if (this.aiTool === 'notion') {
+        pose = this.noScene.name ? 'notion' + this.noScene.name : 'notion';
       }
       else pose = this.aiTool;
     } else if (this.musicPlaying) {
@@ -520,13 +543,14 @@ const POSE_TINT = {
   canva: 'canva', canvadrag: 'canva', canvatemplate: 'canva', canvapop: 'canva',
   git: 'git', gitcommit: 'git', gitbranch: 'git', gitdiff: 'git', gitpush: 'git',
   figma: 'figma', figmaframes: 'figma',
+  notion: 'notion', notioncheck: 'notion',
 };
 
 // nom de la facette affiché au-dessus du compagnon
 const IDENTITY_NAME = {
   claude: 'Laudi', vscode: 'Codi', chatgpt: 'Gepti', gemini: 'Gemi',
   affinity: 'Arti', discord: 'Cordi', youtube: 'Tubi', canva: 'Canvi', git: 'Giti',
-  figma: 'Figmi',
+  figma: 'Figmi', notion: 'Noti',
 };
 const ACTIVITY_NAME = {
   code: 'Hacki', terminal: 'Hacki', web: 'Webi', design: 'Desi',
@@ -550,6 +574,8 @@ const TINTS = {
   git:      { bg: '13,17,23',  off: '139,148,158,0.15', lit: '176,190,205', glow: '88,166,255,0.6' },
   // Figma : orange/or (couleur "F" du logo)
   figma:    { bg: '26,16,6',   off: '255,170,60,0.13',  lit: '255,224,180', glow: '255,140,40,0.9' },
+  // Notion : monochrome, minimaliste (pas de couleur de marque)
+  notion:   { bg: '17,17,19',  off: '215,215,218,0.10', lit: '238,238,240', glow: '205,205,210,0.6' },
 };
 
 const cv = document.getElementById('pet');
