@@ -3,6 +3,11 @@
 Le personnage du Nothing Pet, mais sur le bureau : une petite fenêtre
 transparente toujours au-dessus, qu'on attrape et pose où on veut.
 
+> Ce moteur (rendu + humeurs) est aussi porté, en partie, dans le noyau de
+> [Nothing OS](https://github.com/zaderlyl/Nothing-OS) sous le nom **Asti**.
+> Les deux évoluent indépendamment ; les ajouts d'un côté sont reportés
+> manuellement de l'autre quand ça a du sens.
+
 ## Lancer
 
 ```bash
