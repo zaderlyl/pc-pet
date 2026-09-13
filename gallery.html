@@ -97,6 +97,11 @@ const TINTS = {
   git:      { bg:'13,17,23',  off:'139,148,158,0.15', lit:'176,190,205', glow:'88,166,255,0.6' },
   discord:  { bg:'14,15,34',  off:'112,122,238,0.13', lit:'202,208,255', glow:'88,101,242,0.95' },
   youtube:  { bg:'30,8,8',    off:'255,150,150,0.10', lit:'255,214,208', glow:'255,72,58,1' },
+  figma:    { bg:'26,16,6',   off:'255,170,60,0.13',  lit:'255,224,180', glow:'255,140,40,0.9' },
+  notion:   { bg:'17,17,19',  off:'215,215,218,0.10', lit:'238,238,240', glow:'205,205,210,0.6' },
+  spotify:  { bg:'6,20,12',   off:'80,220,130,0.12',  lit:'190,255,210', glow:'29,185,84,0.95' },
+  adobe:    { bg:'24,6,16',   off:'255,90,150,0.13',  lit:'255,205,222', glow:'230,20,110,0.85' },
+  steam:    { bg:'8,16,24',   off:'110,190,230,0.12', lit:'200,235,255', glow:'102,192,244,0.9' },
 };
 
 const NEUTRAL_COS = { hat:'none', eyes:'none', mouth:'none', beard:'none', neck:'none' };
@@ -147,6 +152,15 @@ const D = {
   canvadrag:'Canvi : il glisse un élément — un repère magnétique, et ça claque en place.',
   canvatemplate:'Canvi : un template entier apparaît d’un coup, il valide d’un bond.',
   canvapop:'Canvi : palette multicolore qui défile vite, museau de chat.',
+  figma:'Figmi — Figma, le collaboratif enthousiaste. Écran orange/or (couleur du logo), yeux souriants qui suivent les composants du regard.',
+  figmaframes:'Figmi : les frames s’organisent en grille, il valide d’un sourire éclatant.',
+  notion:'Noti — Notion, le scribe minimaliste. Écran monochrome (pas de couleur de marque), regard calme, posé, lit/écrit sans bruit.',
+  notioncheck:'Noti : coche une tâche — la case se remplit, satisfait.',
+  spotify:'Spoti — Spotify, le mélomane. Écran vert #1DB954, hoche la tête sur le rythme, égaliseur animé sous le menton.',
+  adobe:'Adobi — toute la suite Adobe (Photoshop, Illustrator, XD, Premiere…) réunie en une seule identité. Écran rouge-magenta Creative Cloud, langue tirée comme Arti, concentré.',
+  adobeswatch:'Adobi : choisit une couleur dans le nuancier qui défile.',
+  steam:'Steami — Steam, le joueur impatient. Écran bleu #66C0F4, parcourt sa bibliothèque, léger rebond d’impatience.',
+  steamwin:'Steami : succès débloqué — étoiles qui tournent, sourire large.',
   volup:'Le volume monte : il sursaute vers le haut, chevrons ↑.',
   voldown:'Le volume baisse : il s’affaisse, chevrons ↓.',
   mute:'Son coupé : mains sur les oreilles, gros ×.',
@@ -284,6 +298,25 @@ const SECTIONS = [
     { pose:'canvadrag',     label:'Glisser magnétique',      tint:'canva', d:D.canvadrag },
     { pose:'canvatemplate', label:'Template posé',           tint:'canva', d:D.canvatemplate },
     { pose:'canvapop',      label:'Palette pop',             tint:'canva', d:D.canvapop },
+  ]},
+  { title: 'Figmi — Figma, le collaboratif enthousiaste', items: [
+    { pose:'figma',       label:'Attente (suit les composants)', tint:'figma', d:D.figma },
+    { pose:'figmaframes', label:'Frames en grille',              tint:'figma', d:D.figmaframes },
+  ]},
+  { title: 'Noti — Notion, le scribe minimaliste', items: [
+    { pose:'notion',      label:'Attente (lit/écrit)', tint:'notion', d:D.notion },
+    { pose:'notioncheck', label:'Coche une tâche',     tint:'notion', d:D.notioncheck },
+  ]},
+  { title: 'Spoti — Spotify, le mélomane', items: [
+    { pose:'spotify', label:'Écoute (égaliseur)', tint:'spotify', d:D.spotify },
+  ]},
+  { title: 'Adobi — Adobe (toute la suite)', items: [
+    { pose:'adobe',       label:'Attente (concentré)', tint:'adobe', d:D.adobe },
+    { pose:'adobeswatch', label:'Nuancier',            tint:'adobe', d:D.adobeswatch },
+  ]},
+  { title: 'Steami — Steam, le joueur impatient', items: [
+    { pose:'steam',    label:'Attente (bibliothèque)', tint:'steam', d:D.steam },
+    { pose:'steamwin', label:'Succès débloqué',        tint:'steam', d:D.steamwin },
   ]},
   { title: 'Claude', items: [
     { pose:'claude',      label:'Attente',        tint:'claude', d:D.claude },
