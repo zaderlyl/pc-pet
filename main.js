@@ -34,7 +34,7 @@ for (const [cat, apps] of Object.entries(APP_CATEGORIES)) for (const a of apps) 
 // En écran scindé, `frontApp()` alterne entre les 2 fenêtres → le compagnon
 // changeait d'identité sans arrêt. On garde plutôt l'identité "la plus logique"
 // vue dans les 5 dernières secondes (ex. VS Code + Chrome → VS Code).
-const IDENTITY_PRIORITY = ['vscode', 'git', 'claude', 'affinity', 'figma', 'canva', 'notion', 'gemini', 'chatgpt', 'discord', 'youtube'];
+const IDENTITY_PRIORITY = ['vscode', 'git', 'claude', 'affinity', 'figma', 'canva', 'notion', 'gemini', 'chatgpt', 'spotify', 'discord', 'youtube'];
 const CAT_PRIORITY = ['design', 'code', 'terminal', 'chat', 'game', 'media', 'web'];
 const SMOOTH_MS = 5000;
 let seenApps = [];   // { tool, cat, ts }
@@ -100,6 +100,7 @@ function aiToolOf(appName, url, title) {
   if (appName === 'YouTube') return 'youtube';
   if (appName === 'Figma') return 'figma';
   if (appName === 'Notion') return 'notion';
+  if (appName === 'Spotify') return 'spotify';
   if (/Affinity/i.test(appName || '')) return 'affinity';
   if (/^Canva\b/i.test(appName || '')) return 'canva';
   if (GIT_APPS.includes(appName)) return 'git';
@@ -115,6 +116,7 @@ function aiToolOf(appName, url, title) {
       if (/(^|\.)canva\.com$/i.test(h)) return 'canva';
       if (/(^|\.)figma\.com$/i.test(h)) return 'figma';
       if (/(^|\.)notion\.so$/i.test(h)) return 'notion';
+      if (/(^|\.)open\.spotify\.com$/i.test(h)) return 'spotify';
     } catch {}
   }
   if (title) {                       // repli sur le titre d'onglet
@@ -142,6 +144,7 @@ const LOCK_APPS = [
   { tool: 'canva', names: ['Canva'] },
   { tool: 'notion', names: ['Notion'] },
   { tool: 'chatgpt', names: ['ChatGPT'] },
+  { tool: 'spotify', names: ['Spotify'] },
   { tool: 'discord', names: ['Discord'] },
   { tool: 'youtube', names: ['YouTube'] },
 ];

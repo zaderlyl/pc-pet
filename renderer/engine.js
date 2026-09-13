@@ -705,6 +705,14 @@ function drawCreature(s, t) {
         extras.push({ kind:'checkbox', ph: t });
         break;
       }
+      // ---- Spotify : le mélomane — hoche la tête sur le rythme ----
+      case 'spotify': {
+        eyeStyle = 'arc'; mouth = 'wobble';
+        cy -= Math.abs(wave(t, 2)) * 1.0;
+        tilt = Math.sin(t * 2.2) * 0.06;
+        extras.push({ kind:'bars', ph: t });
+        break;
+      }
       // ---- Git / GitHub : le gardien de l'histoire — il archive, surveille le
       //      graphe des branches, valide chaque instantané avec soin ----
       case 'git': {             // base : posé, il regarde le graphe des commits défiler
@@ -1858,6 +1866,15 @@ function drawExtra(e, cx, cy, bw, bh, t, b, rot) {
       if (q > 0.35) {                         // se coche
         strokeLine(x0 + 0.25, y0 + 0.9, x0 + 0.65, y0 + 1.3, 0.3, b);
         strokeLine(x0 + 0.65, y0 + 1.3, x0 + 1.35, y0 + 0.3, 0.3, b);
+      }
+      break;
+    }
+    case 'bars': {                            // égaliseur qui bat au rythme (Spotify)
+      const p = e.ph ?? t;
+      for (let i = 0; i < 3; i++) {
+        const h = 0.8 + Math.abs(Math.sin(p * 6 + i * 2.1)) * 1.8;
+        const x = cx - 2 + i * 2, y0 = cy + bh + 2.6;
+        strokeLine(x, y0, x, y0 - h, 0.4, b * 0.85);
       }
       break;
     }

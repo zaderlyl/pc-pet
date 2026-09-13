@@ -544,13 +544,14 @@ const POSE_TINT = {
   git: 'git', gitcommit: 'git', gitbranch: 'git', gitdiff: 'git', gitpush: 'git',
   figma: 'figma', figmaframes: 'figma',
   notion: 'notion', notioncheck: 'notion',
+  spotify: 'spotify',
 };
 
 // nom de la facette affiché au-dessus du compagnon
 const IDENTITY_NAME = {
   claude: 'Laudi', vscode: 'Codi', chatgpt: 'Gepti', gemini: 'Gemi',
   affinity: 'Arti', discord: 'Cordi', youtube: 'Tubi', canva: 'Canvi', git: 'Giti',
-  figma: 'Figmi', notion: 'Noti',
+  figma: 'Figmi', notion: 'Noti', spotify: 'Spoti',
 };
 const ACTIVITY_NAME = {
   code: 'Hacki', terminal: 'Hacki', web: 'Webi', design: 'Desi',
@@ -576,6 +577,8 @@ const TINTS = {
   figma:    { bg: '26,16,6',   off: '255,170,60,0.13',  lit: '255,224,180', glow: '255,140,40,0.9' },
   // Notion : monochrome, minimaliste (pas de couleur de marque)
   notion:   { bg: '17,17,19',  off: '215,215,218,0.10', lit: '238,238,240', glow: '205,205,210,0.6' },
+  // Spotify : vert #1DB954
+  spotify:  { bg: '6,20,12',   off: '80,220,130,0.12',  lit: '190,255,210', glow: '29,185,84,0.95' },
 };
 
 const cv = document.getElementById('pet');
