@@ -1,0 +1,37 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  html, body { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: transparent; }
+  body { -webkit-user-select: none; cursor: grab; }
+  body.dragging { cursor: grabbing; }
+
+  /* bande "plaque de nom" en haut ; le canvas occupe le carré du bas */
+  #nameplate {
+    position: absolute; top: 0; left: 0; right: 0; height: 26px;
+    display: flex; align-items: center; justify-content: center;
+    font: 600 12px/1 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    pointer-events: none;
+    opacity: 0; transform: translateY(3px);
+    transition: opacity .2s ease, transform .2s ease;
+  }
+  #nameplate.show { opacity: 1; transform: translateY(0); }
+  #nameplate span {
+    padding: 3px 10px; border-radius: 999px;
+    color: #fff; background: rgba(16, 17, 22, 0.82);
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    box-shadow: 0 3px 12px rgba(0, 0, 0, 0.4);
+    letter-spacing: 0.02em; white-space: nowrap;
+  }
+
+  #pet { position: absolute; left: 0; bottom: 0; display: block; width: 100vw; height: 100vw; }
+</style>
+</head>
+<body>
+  <div id="nameplate"><span id="nameplate-txt"></span></div>
+  <canvas id="pet"></canvas>
+  <script src="engine.js"></script>
+  <script src="pet.js"></script>
+</body>
+</html>

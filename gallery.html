@@ -1,0 +1,593 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PC Pet — Galerie des emotes</title>
+<style>
+  :root { color-scheme: dark; }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: #0a0b0e; color: #d7dae2;
+    font: 13px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  }
+  header {
+    position: sticky; top: 0; z-index: 5;
+    background: rgba(10, 11, 14, 0.92); backdrop-filter: blur(8px);
+    border-bottom: 1px solid #1e2128; padding: 12px 20px;
+    display: flex; flex-wrap: wrap; gap: 16px 22px; align-items: center;
+  }
+  header h1 { font-size: 15px; margin: 0; font-weight: 600; letter-spacing: .2px; }
+  header .ctl { display: flex; align-items: center; gap: 8px; }
+  header label { color: #8b909c; font-size: 12px; }
+  input[type=range] { width: 130px; accent-color: #d9895a; }
+  input[type=search] {
+    background: #14161c; border: 1px solid #2a2e37; color: #d7dae2;
+    border-radius: 7px; padding: 6px 10px; width: 190px; font: inherit;
+  }
+  button {
+    background: #1b1e25; border: 1px solid #2a2e37; color: #d7dae2;
+    border-radius: 7px; padding: 6px 12px; font: inherit; cursor: pointer;
+  }
+  button:hover { background: #23272f; }
+  main { padding: 8px 20px 60px; }
+  section > h2 {
+    font-size: 12px; text-transform: uppercase; letter-spacing: 1.2px;
+    color: #7e838f; margin: 26px 0 12px; font-weight: 600;
+  }
+  .grid {
+    display: grid; gap: 14px;
+    grid-template-columns: repeat(auto-fill, minmax(132px, 1fr));
+  }
+  .cell {
+    background: #101217; border: 1px solid #1c1f27; border-radius: 12px;
+    padding: 10px 8px 9px; text-align: center; cursor: pointer;
+    transition: border-color .12s, transform .12s;
+  }
+  .cell:hover { border-color: #d9895a55; transform: translateY(-2px); }
+  .cell canvas { width: 116px; height: 116px; display: block; margin: 0 auto; border-radius: 10px; background: #060709; }
+  .cell .lbl { margin-top: 7px; font-size: 12px; color: #d7dae2; }
+  .cell .pid { font-size: 10px; color: #6b7079; font-family: ui-monospace, Menlo, monospace; }
+  .hidden { display: none !important; }
+  #overlay {
+    position: fixed; inset: 0; z-index: 20; background: rgba(6, 7, 9, .9);
+    display: none; align-items: center; justify-content: center; flex-direction: column; gap: 14px;
+  }
+  #overlay.show { display: flex; }
+  #overlay canvas { width: 340px; height: 340px; background: #060709; border-radius: 20px; }
+  #overlay .oi { text-align: center; max-width: 460px; padding: 0 20px; }
+  #overlay .ot { font-size: 15px; font-weight: 600; }
+  #overlay .op { font-family: ui-monospace, Menlo, monospace; color: #d9895a; font-size: 12px; margin-top: 2px; }
+  #overlay .od { color: #9aa0ac; margin-top: 8px; }
+  #overlay .hint { color: #61656e; font-size: 11px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>🐾 PC&nbsp;Pet — Galerie</h1>
+  <div class="ctl"><label>Vitesse</label><input type="range" id="speed" min="0.3" max="2.5" step="0.1" value="1"><span id="speedv" style="color:#8b909c;width:30px">1x</span></div>
+  <div class="ctl"><button id="pause">⏸ Pause</button></div>
+  <div class="ctl"><input type="search" id="filter" placeholder="filtrer (nom, pose…)"></div>
+  <div class="ctl" style="color:#6b7079" id="count"></div>
+</header>
+<main id="main"></main>
+
+<div id="overlay">
+  <canvas id="obig" width="680" height="680"></canvas>
+  <div class="oi">
+    <div class="ot" id="ott"></div>
+    <div class="op" id="opp"></div>
+    <div class="od" id="odd"></div>
+  </div>
+  <div class="hint">clic n’importe où pour fermer</div>
+</div>
+
+<script src="renderer/engine.js"></script>
+<script>
+// ---- teintes d'écran (identiques à pet.js) --------------------------------
+const TINTS = {
+  _:        { bg:'14,15,20',  off:'224,231,247,0.09', lit:'233,239,253', glow:'200,220,255,0.9' },
+  matrix:   { bg:'6,16,8',    off:'80,220,120,0.10',  lit:'180,255,190', glow:'90,255,140,0.9' },
+  claude:   { bg:'28,14,8',   off:'236,140,95,0.11',  lit:'255,206,174', glow:'240,120,72,0.9' },
+  chatgpt:  { bg:'10,24,8',   off:'167,241,117,0.10', lit:'221,255,196', glow:'167,241,117,0.9' },
+  gemini:   { bg:'16,10,30',  off:'160,130,250,0.12', lit:'214,192,255', glow:'158,110,255,0.9' },
+  affinity: { bg:'10,24,8',   off:'167,241,117,0.11', lit:'221,255,196', glow:'167,241,117,0.9' },
+  vscode:   { bg:'6,17,28',   off:'0,122,204,0.14',   lit:'150,205,255', glow:'0,122,204,0.95' },
+  canva:    { bg:'4,24,28',   off:'0,196,204,0.13',   lit:'170,240,244', glow:'0,196,204,0.9' },
+  git:      { bg:'13,17,23',  off:'139,148,158,0.15', lit:'176,190,205', glow:'88,166,255,0.6' },
+  discord:  { bg:'14,15,34',  off:'112,122,238,0.13', lit:'202,208,255', glow:'88,101,242,0.95' },
+  youtube:  { bg:'30,8,8',    off:'255,150,150,0.10', lit:'255,214,208', glow:'255,72,58,1' },
+};
+
+const NEUTRAL_COS = { hat:'none', eyes:'none', mouth:'none', beard:'none', neck:'none' };
+
+// ---- catalogue -----------------------------------------------------------
+const D = {
+  rest_day:'Pose de repos en journée : éveillé, serein.',
+  rest_eve:'Soirée : paupières mi-closes, sourire calme.',
+  rest_night:'Nuit : il dort, les yeux en trait.',
+  blink:'Clignement rapide qui coupe la pose de base à intervalle aléatoire.',
+  twitch:'Petit tic de la tête.',
+  lookL:'Le regard part à gauche.', lookR:'Le regard part à droite.',
+  lookU:'Le regard part en haut.', lookD:'Le regard part en bas.',
+  yawn:'Bâillement, yeux plissés.',
+  zzz:'Sommeil : yeux fermés, un « Z » qui monte.',
+  'scene:pipe':'Scène calme : chapeau haut-de-forme + pipe, il fume tranquillement.',
+  'scene:shades':'Scène : des lunettes de soleil tombent du ciel, regard stylé, il se secoue, elles glissent puis tombent.',
+  dizzy:'Étourdi : yeux en spirale, étoiles qui tournent.',
+  ears:'Il se bouche les oreilles (bruit).',
+  panic:'Panique : yeux ronds, bras en l’air, point d’exclamation.',
+  bounce:'Il rebondit joyeusement.',
+  dance:'Il danse, une note de musique s’envole.',
+  beatbop:'Il suit le rythme, bouche en waveform, plusieurs notes.',
+  happy:'Content : yeux en cœur, il saute, un cœur s’envole.',
+  greet:'Coucou : il fait signe de la main en revenant.',
+  grumpywake:'Réveil grincheux : yeux fâchés.',
+  lowbat:'Batterie faible : fâché, il fume, jauge vide.',
+  alert:'Sursaut : yeux ronds, « ! », il bondit.',
+  sad:'Triste : regard bas, bouche plate.',
+  love:'Amour : yeux-cœur qui battent (lub-dub), grand sourire.',
+  curious:'Navigation web : le regard se balade partout.',
+  creative:'Design / création : yeux brillants, il regarde en l’air, inspiré.',
+  chill:'Média : détendu, il se balance en regardant.',
+  social:'Chat / messagerie : coucou, il rougit.',
+  focus:'Code / terminal : concentré, petits hochements en « tapant ».',
+  matrix:'Terminal / IDE générique : yeux « matrice », écran vert, pluie de code.',
+  vscode:'VS Code — l’ingénieur méthodique. Base : posé, il tape, curseur qui clignote, écran bleu #007ACC avec des lignes de code qui défilent, ampoule IntelliSense de temps en temps.',
+  vscodetype:'VS Code : autocomplétion — une liste déroule, le regard la parcourt, il valide la bonne.',
+  vscodelint:'VS Code : un soulignement rouge apparaît — il fronce les sourcils, se penche, puis une coche : corrigé.',
+  vscodedebug:'VS Code : débogage — un point d’arrêt, il avance ligne à ligne, prudent, regard bas.',
+  vscodesave:'VS Code : ⌘S — petite coche, hochement satisfait, il rougit.',
+  git:'Giti — Git / GitHub / GitHub Desktop, le gardien de l’histoire. Base : posé, écran ardoise #0d1117, il regarde le graphe des commits défiler, hochements lents.',
+  gitcommit:'Giti : un instantané — un nœud se pose sur la ligne, une coche, satisfaction.',
+  gitbranch:'Giti : le graphe fourche — il penche la tête pour suivre la nouvelle branche.',
+  gitdiff:'Giti : il relit un diff — lignes ajoutées (+) bien nettes, retirées (−) discrètes, le regard scanne.',
+  gitpush:'Giti : push — une flèche part vers le haut, yeux grands ouverts, whoosh.',
+  canva:'Canvi — Canva, le compositeur express. L’inverse du perfectionnisme d’Arti : rapide, joyeux, écran cyan #00C4CC, il pioche dans les templates, ça va vite.',
+  canvadrag:'Canvi : il glisse un élément — un repère magnétique, et ça claque en place.',
+  canvatemplate:'Canvi : un template entier apparaît d’un coup, il valide d’un bond.',
+  canvapop:'Canvi : palette multicolore qui défile vite, museau de chat.',
+  volup:'Le volume monte : il sursaute vers le haut, chevrons ↑.',
+  voldown:'Le volume baisse : il s’affaisse, chevrons ↓.',
+  mute:'Son coupé : mains sur les oreilles, gros ×.',
+  chatgpt:'ChatGPT — l’assistant appliqué. Base : posture neutre, yeux « anneau », « ••• » de réflexion, écran vert #A7F175.',
+  chatgptthink:'ChatGPT : il rédige — « ••• » qui pulse posément, regard en l’air.',
+  chatgpttype:'ChatGPT : il « streame » sa réponse — les lignes de texte se construisent avec un curseur au bout.',
+  chatgptlist:'ChatGPT : il structure — une liste à puces qui apparaît point par point.',
+  chatgptnod:'ChatGPT : « bien sûr ! » — hochement courtois, il rougit.',
+  gemini:'Gemini — le jumeau show-off. Base : joueur, il pétille, deux étoiles qui scintillent, écran violet.',
+  geminispark:'Gemini : éclat — une gerbe d’étincelles, ravi, il rebondit.',
+  geminiswirl:'Gemini : son étoile fait le tour de sa tête, il la suit des yeux.',
+  geminiwink:'Gemini : clin d’œil malicieux.',
+  geminimuse:'Gemini : créatif — il regarde en l’air, une idée pétillante se forme.',
+  affinity:'Affinity (dessin / illustration) — base : il crayonne sur sa planche, langue tirée de concentration, traits de construction. Fond = grille d\'artboard + repères de coupe.',
+  affinitypaint:'Affinity : il se peint lui-même son sourire au pinceau (émote signature).',
+  affinitypen:'Affinity : outil plume — il pose des nœuds de courbe un par un, ultra précis, œil qui vise.',
+  affinitycolor:'Affinity : il choisit une couleur — nuancier qui défile, l\'œil accroche celle du milieu.',
+  affinityzoom:'Affinity : zoom pixel — un seul œil géant, micro-ajustements au stylet.',
+  affinitystep:'Affinity : il recule et penche la tête pour juger son travail, puis sourit, satisfait.',
+  discord:'Discord — le gremlin hyper-social. Base : yeux grands ouverts qui suivent le chat qui défile (fond = messages qui remontent), « ah ! » à chaque message.',
+  discordtype:'Discord — attente : il tape une réponse à toute vitesse, « … » il écrit.',
+  discordscan:'Discord — attente : trop de salons ouverts, la tête part dans tous les sens.',
+  discordpile:'Conditionnel : beaucoup de non-lus (badge > 40) — un peu débordé, goutte de sueur, pile de notifs.',
+  discordping:'Action : le badge de non-lus augmente (mention / DM) — flash du logo Discord + rebond + « ! ».',
+  discordzero:'Action : le badge chute d\'au moins 5 d\'un coup (tu viens de lire un paquet de notifs) — soulagement, il saute, étincelle.',
+  discordring:'Action : appel entrant — deviné quand tu rejoins un vocal alors que Discord n\'était pas au 1er plan. Ça sonne, ondes de part et d\'autre + « ! ».',
+  discordcall:'État : en appel privé (DM) — casque + bulle de dialogue, discussion posée à tour de rôle.',
+  discordvoiceserver:'État : dans un salon vocal de serveur (deviné au titre de la fenêtre) — casque, ça bounce, notes de musique, ambiance.',
+  discordvideo:'État : quelqu\'un a la cam ou partage l\'écran (log « incomingVideoEnabled ») — casque + petit écran, yeux qui brillent.',
+  purr:'Interaction — clic sur le perso : caresse. Yeux fermés, museau de chat, une main le caresse sur la tête, il ronronne, des cœurs.',
+  smitten:'Interaction — plusieurs caresses de suite : gaga, yeux en cœur, des cœurs qui tournent autour de lui.',
+  spin:'Interaction — double-clic : pirouette, un tour complet + traînée de vitesse.',
+  flip:'Interaction — double-clic : salto arrière (il saute et fait une rotation).',
+  wiggle:'Interaction — double-clic : petite danse des hanches, notes de musique.',
+  nom:'Friandise — 🍪 cookie / 🍩 donut : il mâche, content, miettes et petits cœurs.',
+  nibble:'Friandise — 🍓 fraise : petites bouchées délicates, museau de chat, cœurs qui montent.',
+  gnaw:'Friandise — 🦴 os : il le ronge en secouant la tête comme un chiot, os tenu dans la gueule.',
+  gulp:'Friandise — 🐟 poisson : renverse la tête et le gobe d’un coup façon chat, puis se pourlèche.',
+  crunch:'Friandise — 🥕 carotte : croque net et vite, regard déterminé, éclats à chaque coup de dent.',
+  sugarrush:'Friandise — 🍬 bonbon : shot de sucre, yeux en spirale, il part en vrille avec des étoiles.',
+  spicy:'Friandise — 🌶 piment : une bouchée tranquille… puis ça brûle : vapeur, panique, sueur, il vire au rouge.',
+  recharge:'Friandise — 🔋 pile : c’est un robot — il se branche, la jauge se remplit, éclairs, il se redresse et rayonne.',
+  stuffed:'Friandise — trop mangé : bien rond, repu, petit rot.',
+  youtube:'YouTube — le zombie hypnotisé. Base : regard vitreux figé sur l\'écran, la lueur bat sur son visage (scanlines + flicker rouge), avachi, ré-aspiré au centre à chaque fois.',
+  youtubescroll:'YouTube — « la prochaine est peut-être mieux »… il scrolle le feed en boucle, regard qui saute.',
+  youtuberabbithole:'YouTube — 3 h du mat\', « encore une »… yeux qui se ferment, la tête qui tombe, micro-sommeils.',
+  youtubewatch:'État : une vidéo est vraiment en lecture (élément <video> non en pause) — absorbé, l\'écran se reflète (scintillement), popcorn, petit rire de temps en temps.',
+  claude:'Claude — attente : chaleureux, le regard dérive, clignement lent.',
+  claudelook:'Claude — attente : il regarde autour de lui, curieux.',
+  claudehum:'Claude — attente : il fredonne, se balance, une note monte.',
+  clauderead:'Claude — attente : il lit, le regard balaye les lignes.',
+  claudeidea:'Claude — attente : une étincelle d’idée pop au-dessus de sa tête.',
+  claudethink:'Claude réfléchit / rédige : bouche en chargement •, ••, •••, vide, en boucle.',
+  claudedone:'Claude a fini : « ! » de contentement, puis retour à l’attente.',
+  cos_tophat:'Chapeau haut-de-forme.', cos_witch:'Chapeau de sorcière.',
+  cos_catears:'Oreilles de chat.', cos_cap:'Casquette droite.',
+  cos_glasses:'Lunettes.', cos_monocle:'Monocle (verre élargi).',
+  cos_lashes:'Cils.', cos_catmouth:'Bouche de chat (ω).', cos_pacifier:'Tétine.',
+  cos_tache:'Moustache carrée.', cos_italian:'Moustache italienne.', cos_full:'Barbe + moustache.',
+  cos_bowtie:'Nœud papillon.',
+};
+
+const SECTIONS = [
+  { title: 'Repos — selon l’heure', items: [
+    { pose:'rest', label:'Jour',  mode:'day',   pid:'rest / day',   d:D.rest_day },
+    { pose:'rest', label:'Soir',  mode:'eve',   pid:'rest / eve',   d:D.rest_eve },
+    { pose:'rest', label:'Nuit',  mode:'night', pid:'rest / night', d:D.rest_night },
+  ]},
+  { title: 'Micro-animations (couche 2)', items: [
+    { pose:'blink',  label:'Clignement', layer:2, per:1.5, d:D.blink },
+    { pose:'twitch', label:'Tic',        layer:2, per:1.3, d:D.twitch },
+    { pose:'lookL',  label:'Regard ←',   layer:2, per:2.6, d:D.lookL },
+    { pose:'lookR',  label:'Regard →',   layer:2, per:2.6, d:D.lookR },
+    { pose:'lookU',  label:'Regard ↑',   layer:2, per:2.4, d:D.lookU },
+    { pose:'lookD',  label:'Regard ↓',   layer:2, per:2.4, d:D.lookD },
+    { pose:'yawn',   label:'Bâillement', layer:2, per:3.0, d:D.yawn },
+    { pose:'zzz',    label:'Dodo',       layer:2, per:3.4, d:D.zzz },
+  ]},
+  { title: 'Scènes calmes (couche 1.5)', items: [
+    { pose:'scene:pipe',   label:'Chapeau & pipe',      per:9, d:D['scene:pipe'] },
+    { pose:'scene:shades', label:'Lunettes de soleil',  phased:true, per:8, d:D['scene:shades'] },
+  ]},
+  { title: 'Réactions & humeurs', items: [
+    'dizzy','ears','panic','bounce','dance','beatbop','happy','greet',
+    'grumpywake','lowbat','alert','sad','love',
+  ].map(p => ({ pose:p, label:{
+      dizzy:'Étourdi',ears:'Oreilles bouchées',panic:'Panique',bounce:'Rebond',dance:'Danse',
+      beatbop:'Groove',happy:'Content',greet:'Coucou',grumpywake:'Réveil grincheux',
+      lowbat:'Batterie faible',alert:'Sursaut',sad:'Triste',love:'Amour',
+    }[p], d:D[p] })) },
+  { title: 'Selon l’appli active', items: [
+    { pose:'curious',  label:'Web',              d:D.curious },
+    { pose:'creative', label:'Design / Créa',    d:D.creative },
+    { pose:'chill',    label:'Média',            d:D.chill },
+    { pose:'social',   label:'Chat',             d:D.social },
+    { pose:'bounce',   label:'Jeu',              d:'Jeu vidéo : il rebondit (même émote que « Rebond »).' },
+    { pose:'focus',    label:'Code — concentré', d:D.focus },
+    { pose:'matrix',   label:'Code — matrice',   tint:'matrix', d:D.matrix },
+  ]},
+  { title: 'Son', items: [
+    { pose:'volup',   label:'Volume +', d:D.volup },
+    { pose:'voldown', label:'Volume −', d:D.voldown },
+    { pose:'mute',    label:'Coupé',    d:D.mute },
+  ]},
+  { title: 'ChatGPT — l’assistant appliqué', items: [
+    { pose:'chatgpt',      label:'Base (•••)',      tint:'chatgpt', d:D.chatgpt },
+    { pose:'chatgptthink', label:'Réfléchit',       tint:'chatgpt', d:D.chatgptthink },
+    { pose:'chatgpttype',  label:'Streame la réponse', tint:'chatgpt', d:D.chatgpttype },
+    { pose:'chatgptlist',  label:'Liste à puces',   tint:'chatgpt', d:D.chatgptlist },
+    { pose:'chatgptnod',   label:'« Bien sûr ! »',  tint:'chatgpt', d:D.chatgptnod },
+  ]},
+  { title: 'Gemini — le jumeau show-off', items: [
+    { pose:'gemini',       label:'Base (pétille)',  tint:'gemini', d:D.gemini },
+    { pose:'geminispark',  label:'Éclat',           tint:'gemini', d:D.geminispark },
+    { pose:'geminiswirl',  label:'Étoile en orbite',tint:'gemini', d:D.geminiswirl },
+    { pose:'geminiwink',   label:'Clin d’œil',      tint:'gemini', d:D.geminiwink },
+    { pose:'geminimuse',   label:'Muse',            tint:'gemini', d:D.geminimuse },
+  ]},
+  { title: 'Codi — VS Code, l’ingénieur méthodique', items: [
+    { pose:'vscode',      label:'Attente (il tape)',  tint:'vscode', d:D.vscode },
+    { pose:'vscodetype',  label:'Autocomplétion',     tint:'vscode', d:D.vscodetype },
+    { pose:'vscodelint',  label:'Erreur → corrige',   tint:'vscode', d:D.vscodelint },
+    { pose:'vscodedebug', label:'Débogage pas à pas', tint:'vscode', d:D.vscodedebug },
+    { pose:'vscodesave',  label:'Sauvegarde (⌘S)',    tint:'vscode', d:D.vscodesave },
+  ]},
+  { title: 'Giti — Git / GitHub, le gardien de l’histoire', items: [
+    { pose:'git',       label:'Attente (le graphe défile)', tint:'git', d:D.git },
+    { pose:'gitcommit', label:'Commit',                     tint:'git', d:D.gitcommit },
+    { pose:'gitbranch', label:'Branche',                    tint:'git', d:D.gitbranch },
+    { pose:'gitdiff',   label:'Relit un diff',              tint:'git', d:D.gitdiff },
+    { pose:'gitpush',   label:'Push',                       tint:'git', d:D.gitpush },
+  ]},
+  { title: 'Canvi — Canva, le compositeur express', items: [
+    { pose:'canva',         label:'Attente (les templates)', tint:'canva', d:D.canva },
+    { pose:'canvadrag',     label:'Glisser magnétique',      tint:'canva', d:D.canvadrag },
+    { pose:'canvatemplate', label:'Template posé',           tint:'canva', d:D.canvatemplate },
+    { pose:'canvapop',      label:'Palette pop',             tint:'canva', d:D.canvapop },
+  ]},
+  { title: 'Claude', items: [
+    { pose:'claude',      label:'Attente',        tint:'claude', d:D.claude },
+    { pose:'claudelook',  label:'Regarde autour', tint:'claude', d:D.claudelook },
+    { pose:'claudehum',   label:'Fredonne',       tint:'claude', d:D.claudehum },
+    { pose:'clauderead',  label:'Lit',            tint:'claude', d:D.clauderead },
+    { pose:'claudeidea',  label:'Idée',           tint:'claude', d:D.claudeidea },
+    { pose:'claudethink', label:'Réfléchit',      tint:'claude', d:D.claudethink },
+    { pose:'claudedone',  label:'Fini !',         tint:'claude', d:D.claudedone },
+  ]},
+  { title: 'Affinity — l’artiste minutieux', items: [
+    { pose:'affinity',      label:'Crayon (base)', tint:'affinity', d:D.affinity },
+    { pose:'affinitypaint', label:'Pinceau',       tint:'affinity', d:D.affinitypaint },
+    { pose:'affinitypen',   label:'Plume',         tint:'affinity', d:D.affinitypen },
+    { pose:'affinitycolor', label:'Couleur',       tint:'affinity', d:D.affinitycolor },
+    { pose:'affinityzoom',  label:'Zoom pixel',    tint:'affinity', d:D.affinityzoom },
+    { pose:'affinitystep',  label:'Recule, juge',  tint:'affinity', d:D.affinitystep },
+  ]},
+  { title: 'Discord — le gremlin hyper-social', items: [
+    { pose:'discord',            label:'Attente (le chat défile)', tint:'discord', d:D.discord },
+    { pose:'discordtype',        label:'Tape vite',       tint:'discord', d:D.discordtype },
+    { pose:'discordscan',        label:'Trop de salons',  tint:'discord', d:D.discordscan },
+    { pose:'discordpile',        label:'Débordé',         tint:'discord', d:D.discordpile },
+    { pose:'discordping',        label:'Ping — mention',  tint:'discord', d:D.discordping },
+    { pose:'discordzero',        label:'Rattrapage',      tint:'discord', d:D.discordzero },
+    { pose:'discordring',        label:'Appel entrant',   tint:'discord', d:D.discordring },
+    { pose:'discordcall',        label:'En appel (DM)',   tint:'discord', d:D.discordcall },
+    { pose:'discordvoiceserver', label:'Vocal serveur',   tint:'discord', d:D.discordvoiceserver },
+    { pose:'discordvideo',       label:'Cam / partage',   tint:'discord', d:D.discordvideo },
+  ]},
+  { title: 'YouTube — le zombie hypnotisé', items: [
+    { pose:'youtube',           label:'Attente (hypnotisé)',  tint:'youtube', d:D.youtube },
+    { pose:'youtubescroll',     label:'Scrolle le feed',      tint:'youtube', d:D.youtubescroll },
+    { pose:'youtuberabbithole', label:'« Encore une »…',      tint:'youtube', d:D.youtuberabbithole },
+    { pose:'youtubewatch',      label:'Regarde une vidéo',    tint:'youtube', d:D.youtubewatch },
+  ]},
+  { title: 'Interactions (clic / friandises)', items: [
+    { pose:'purr',    label:'Caresse (clic)',        d:D.purr },
+    { pose:'smitten', label:'Caresses répétées',     d:D.smitten },
+    { pose:'spin',    label:'Pirouette (double-clic)',d:D.spin },
+    { pose:'flip',    label:'Salto (double-clic)',   d:D.flip },
+    { pose:'wiggle',  label:'Danse (double-clic)',   d:D.wiggle },
+    { pose:'nom',       label:'🍪 Cookie / 🍩 Donut', d:D.nom },
+    { pose:'nibble',    label:'🍓 Fraise',            d:D.nibble },
+    { pose:'gnaw',      label:'🦴 Os',                d:D.gnaw },
+    { pose:'gulp',      label:'🐟 Poisson',           d:D.gulp },
+    { pose:'crunch',    label:'🥕 Carotte',           d:D.crunch },
+    { pose:'sugarrush', label:'🍬 Bonbon (sucre)',    d:D.sugarrush },
+    { pose:'spicy',     label:'🌶 Piment',            d:D.spicy },
+    { pose:'recharge',  label:'🔋 Pile (robot)',      d:D.recharge },
+    { pose:'stuffed',   label:'Trop mangé',           d:D.stuffed },
+  ]},
+  { title: 'Cosmétiques', items: [
+    { cos:{ hat:'tophat' },        label:'Haut-de-forme',      pid:'hat: tophat',    d:D.cos_tophat },
+    { cos:{ hat:'witch' },         label:'Sorcière',           pid:'hat: witch',     d:D.cos_witch },
+    { cos:{ hat:'catears' },       label:'Oreilles de chat',   pid:'hat: catears',   d:D.cos_catears },
+    { cos:{ hat:'cap' },           label:'Casquette',          pid:'hat: cap',       d:D.cos_cap },
+    { cos:{ eyes:'glasses' },      label:'Lunettes',           pid:'eyes: glasses',  d:D.cos_glasses },
+    { cos:{ eyes:'monocle' },      label:'Monocle',            pid:'eyes: monocle',  d:D.cos_monocle },
+    { cos:{ eyes:'lashes' },       label:'Cils',               pid:'eyes: lashes',   d:D.cos_lashes },
+    { cos:{ mouth:'cat' },         label:'Bouche de chat',     pid:'mouth: cat',     d:D.cos_catmouth },
+    { cos:{ mouth:'pacifier' },    label:'Tétine',             pid:'mouth: pacifier',d:D.cos_pacifier },
+    { cos:{ beard:'tache' },       label:'Moustache carrée',   pid:'beard: tache',   d:D.cos_tache },
+    { cos:{ beard:'italian' },     label:'Moustache italienne',pid:'beard: italian', d:D.cos_italian },
+    { cos:{ beard:'full' },        label:'Barbe',              pid:'beard: full',    d:D.cos_full },
+    { cos:{ neck:'bowtie' },       label:'Nœud papillon',      pid:'neck: bowtie',   d:D.cos_bowtie },
+  ]},
+];
+
+// ---- rendu d'une frame sur un canvas -------------------------------------
+// ---- fonds "ambiance" par identité (comme dans pet.js) ------------------
+function ambMatrix(gg, st, t, w, h, CELL) {
+  const rows = Math.ceil(h / CELL) + 2, ncol = Math.ceil(w / CELL) + 1;
+  if (!st.cols) { st.cols = []; st.tPrev = t;
+    for (let c = 0; c < ncol; c++) st.cols.push({ y: -Math.random() * rows, spd: 7 + Math.random() * 11, len: 3 + (Math.random() * 6 | 0) }); }
+  const dt = Math.min(.05, Math.max(0, t - st.tPrev)); st.tPrev = t;
+  for (let c = 0; c < ncol; c++) {
+    const col = st.cols[c] || (st.cols[c] = { y: -Math.random() * rows, spd: 7 + Math.random() * 11, len: 3 + (Math.random() * 6 | 0) });
+    col.y += col.spd * dt; const head = Math.floor(col.y);
+    for (let i = 0; i < col.len; i++) {
+      const py = (head - i) * CELL + CELL / 2; if (py < -CELL || py > h + CELL) continue;
+      const a = i === 0 ? .95 : (1 - i / col.len) * .4;
+      gg.fillStyle = i === 0 ? `rgba(210,255,220,${a})` : `rgba(55,215,105,${a})`;
+      gg.beginPath(); gg.arc(c * CELL + CELL / 2, py, CELL * .28, 0, 7); gg.fill();
+    }
+    if (head - col.len > rows) { col.y = -Math.random() * rows * .6; col.spd = 7 + Math.random() * 11; col.len = 3 + (Math.random() * 6 | 0); }
+  }
+}
+function ambDiscord(gg, st, t, w, h, CELL) {
+  if (!st.msgs) { st.msgs = []; st.tPrev = t;
+    for (let i = 0; i < 6; i++) st.msgs.push({ y: Math.random() * h, x: (.12 + Math.random() * .5) * w, spd: 14 + Math.random() * 12, wd: (2.2 + Math.random() * 2.4) * CELL, lines: 1 + (Math.random() * 2 | 0), side: Math.random() < .5 ? -1 : 1 }); }
+  const dt = Math.min(.05, Math.max(0, t - st.tPrev)); st.tPrev = t;
+  for (const m of st.msgs) {
+    m.y -= m.spd * dt;
+    if (m.y < -3 * CELL) { m.y = h + Math.random() * 3 * CELL; m.x = (.1 + Math.random() * .6) * w; m.wd = (2.2 + Math.random() * 2.4) * CELL; m.lines = 1 + (Math.random() * 2 | 0); m.side = Math.random() < .5 ? -1 : 1; }
+    const fade = Math.min(1, m.y / h) * Math.min(1, (h - m.y) / (h * .3)); if (fade <= .02) continue;
+    const bx = m.side < 0 ? m.x : w - m.x - m.wd;
+    gg.fillStyle = `rgba(148,158,255,${.16 * fade})`;
+    for (let l = 0; l < m.lines; l++) { const lw = l === m.lines - 1 ? m.wd * .6 : m.wd; gg.fillRect(bx, m.y + l * CELL * .9, lw, CELL * .5); }
+    gg.fillStyle = `rgba(120,132,246,${.22 * fade})`; gg.beginPath(); gg.arc(bx - CELL * .9, m.y + CELL * .25, CELL * .5, 0, 7); gg.fill();
+  }
+}
+function ambYoutube(gg, st, t, w, h, CELL) {
+  const off = (t * 40) % (CELL * 2);
+  gg.fillStyle = 'rgba(255,90,80,0.04)';
+  for (let y = -CELL * 2 + off; y < h; y += CELL * 2) gg.fillRect(0, y, w, CELL * .6);
+  const flick = .10 + .10 * Math.abs(Math.sin(t * 5.5)) + .04 * Math.sin(t * 23);
+  const lg = gg.createLinearGradient(0, h, 0, h * .35);
+  lg.addColorStop(0, `rgba(255,${90 + 40 * Math.sin(t * 3)},70,${flick})`);
+  lg.addColorStop(1, 'rgba(255,80,70,0)');
+  gg.fillStyle = lg; gg.fillRect(0, 0, w, h);
+}
+function ambAffinity(gg, st, t, w, h, CELL) {
+  const mx = w / 2, my = h / 2, R2 = (R + 1.2) * CELL, step = CELL * 2;
+  gg.strokeStyle = 'rgba(167,241,117,0.05)'; gg.lineWidth = 1; gg.beginPath();
+  for (let gx = mx % step; gx < w; gx += step) { gg.moveTo(gx, 0); gg.lineTo(gx, h); }
+  for (let gy = my % step; gy < h; gy += step) { gg.moveTo(0, gy); gg.lineTo(w, gy); }
+  gg.stroke();
+  gg.strokeStyle = 'rgba(190,255,150,0.18)'; gg.lineWidth = 1.4;
+  const s = R2 * .72;
+  for (const [sx, sy] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) {
+    const c2x = mx + sx * s, c2y = my + sy * s;
+    gg.beginPath(); gg.moveTo(c2x - sx * CELL, c2y); gg.lineTo(c2x, c2y);
+    gg.moveTo(c2x, c2y - sy * CELL); gg.lineTo(c2x, c2y); gg.stroke();
+  }
+}
+function ambVscode(gg, st, t, w, h, CELL) {
+  const lh = CELL * 1.3;
+  if (!st.rows) { st.rows = []; st.tPrev = t; st.off = 0;
+    for (let i = 0; i < 40; i++) st.rows.push({ indent: (Math.random() * 4 | 0), len: 2.5 + Math.random() * 5.5, tok: Math.random() }); }
+  const dt = Math.min(.05, Math.max(0, t - st.tPrev)); st.tPrev = t;
+  st.off += lh * .55 * dt;
+  if (st.off > lh) { st.off -= lh; st.rows.push(st.rows.shift()); }
+  const x0 = w * .5 - CELL * 9;
+  for (let r = 0; r < st.rows.length; r++) {
+    const row = st.rows[r], y = -lh + r * lh - st.off;
+    if (y < -lh || y > h) continue;
+    gg.fillStyle = 'rgba(0,122,204,0.10)';
+    gg.fillRect(x0 - CELL * 1.6, y + lh * .3, CELL * .9, CELL * .4);
+    const ix = x0 + row.indent * CELL * 1.1;
+    gg.fillStyle = `rgba(120,190,255,${.11 + row.tok * .06})`;
+    gg.fillRect(ix, y + lh * .28, row.len * CELL, CELL * .44);
+  }
+  if ((t % 1) < .5) { gg.fillStyle = 'rgba(150,205,255,0.5)'; gg.fillRect(w * .5 + CELL * 2, h * .5 - lh * .4, CELL * .16, lh * .85); }
+}
+function ambCanva(gg, st, t, w, h, CELL) {
+  const mx = w / 2, my = h / 2, step = CELL * 3.2;
+  if (!st.cells) { st.cells = []; st.tPrev = t; st.off = 0;
+    for (let i = 0; i < 24; i++) st.cells.push({ a: 0.05 + Math.random() * 0.08, hue: (Math.random() * 4 | 0) }); }
+  const dt = Math.min(.05, Math.max(0, t - st.tPrev)); st.tPrev = t;
+  st.off = (st.off + dt * CELL * 0.5) % step;
+  const hues = ['0,196,204', '120,90,255', '255,120,170', '255,190,70'];
+  let i = 0;
+  for (let gy = -step + (my % step) - st.off; gy < h; gy += step)
+    for (let gx = (mx % step); gx < w; gx += step) {
+      const c = st.cells[i++ % st.cells.length];
+      gg.fillStyle = `rgba(${hues[c.hue]},${c.a})`;
+      gg.fillRect(gx + CELL * .3, gy + CELL * .3, step - CELL * .9, step - CELL * .9);
+    }
+  gg.strokeStyle = 'rgba(255,120,190,0.16)'; gg.lineWidth = 1;
+  gg.beginPath(); gg.moveTo(mx, 0); gg.lineTo(mx, h); gg.moveTo(0, my + CELL); gg.lineTo(w, my + CELL); gg.stroke();
+}
+function ambGit(gg, st, t, w, h, CELL) {
+  const lh = CELL * 2.2, x0 = w * .5 - CELL * 8;
+  if (!st.o) { st.o = 0; st.tPrev = t; }
+  const dt = Math.min(.05, Math.max(0, t - st.tPrev)); st.tPrev = t;
+  st.o = (st.o + dt * CELL * .6) % lh;
+  gg.strokeStyle = 'rgba(139,148,158,0.18)'; gg.lineWidth = 1.4;
+  gg.beginPath(); gg.moveTo(x0, 0); gg.lineTo(x0, h); gg.stroke();
+  gg.strokeStyle = 'rgba(88,166,255,0.16)';
+  gg.beginPath(); gg.moveTo(x0 + CELL * 2.2, 0); gg.lineTo(x0 + CELL * 2.2, h); gg.stroke();
+  for (let y = -lh + (h % lh) - st.o; y < h + lh; y += lh) {
+    gg.fillStyle = 'rgba(160,175,195,0.35)';
+    gg.beginPath(); gg.arc(x0, y, CELL * .32, 0, 7); gg.fill();
+    if (Math.round(y / lh) % 3 === 0) {
+      gg.fillStyle = 'rgba(88,166,255,0.3)';
+      gg.beginPath(); gg.arc(x0 + CELL * 2.2, y - lh * .5, CELL * .28, 0, 7); gg.fill();
+      gg.strokeStyle = 'rgba(88,166,255,0.16)';
+      gg.beginPath(); gg.moveTo(x0, y); gg.lineTo(x0 + CELL * 2.2, y - lh * .5); gg.stroke();
+    }
+  }
+}
+const AMB = { matrix: ambMatrix, discord: ambDiscord, youtube: ambYoutube, affinity: ambAffinity, vscode: ambVscode, canva: ambCanva, git: ambGit };
+
+function paint(gg, S, item, t) {
+  const per = item.per || 3;
+  const phase = (item.layer === 2 || item.phased) ? (t % per) / per : 0;
+  const mode = item.mode || 'day';
+
+  if (item.cos) Object.assign(cosmetics, NEUTRAL_COS, item.cos);
+  clearBuf();
+  const pose = item.pose || 'rest';
+  const layer = item.layer || (pose === 'rest' || pose.startsWith('scene:') ? 1 : 3);
+  drawCreature({ layer, pose, phase, mode, decor: null, energy: 0.7, collapseStart: 0 }, t);
+  if (item.cos) Object.assign(cosmetics, NEUTRAL_COS);
+
+  const T = TINTS[item.tint] || TINTS._;
+  const CELL = S / N * .9, mx = S / 2, my = S / 2;
+  const rad = Math.min(S / 2 - 2, (R + 0.6) * CELL);
+  gg.clearRect(0, 0, S, S);
+  // disque "boîtier" opaque (comme l'app)
+  gg.beginPath(); gg.arc(mx, my, rad, 0, Math.PI * 2);
+  gg.fillStyle = `rgb(${T.bg})`; gg.fill();
+  gg.save(); gg.beginPath(); gg.arc(mx, my, rad, 0, Math.PI * 2); gg.clip();
+  const vg = gg.createLinearGradient(0, my - rad, 0, my + rad);
+  vg.addColorStop(0, 'rgba(255,255,255,0.055)'); vg.addColorStop(.5, 'rgba(255,255,255,0)');
+  vg.addColorStop(1, 'rgba(0,0,0,0.22)');
+  gg.fillStyle = vg; gg.fillRect(mx - rad, my - rad, rad * 2, rad * 2);
+  gg.restore();
+  gg.beginPath(); gg.arc(mx, my, rad - .75, 0, Math.PI * 2);
+  gg.strokeStyle = `rgba(${T.lit},0.18)`; gg.lineWidth = 1.3; gg.stroke();
+
+  const amb = AMB[item.tint];
+  if (amb) { gg.save(); gg.beginPath(); gg.arc(mx, my, rad, 0, Math.PI * 2); gg.clip();
+    item._amb = item._amb || {}; amb(gg, item._amb, t, S, S, CELL); gg.restore(); }
+
+  const off = (S - CELL * N) / 2;
+  for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) {
+    if (Math.hypot(x - CENTER, y - CENTER) > R) continue;
+    const v = buf[idx(x, y)];
+    const cx = off + x * CELL + CELL / 2, cy = off + y * CELL + CELL / 2;
+    gg.beginPath(); gg.fillStyle = `rgba(${T.off})`;
+    gg.arc(cx, cy, CELL * .30, 0, 7); gg.fill();
+    if (v > .02) {
+      const q = Math.round(v * 8) / 8;
+      gg.beginPath();
+      gg.fillStyle = `rgba(${T.lit},${.24 + q * .76})`;
+      gg.shadowColor = `rgba(${T.glow})`;
+      gg.shadowBlur = CELL * .7 * q;
+      gg.arc(cx, cy, CELL * .36, 0, 7); gg.fill();
+      gg.shadowBlur = 0;
+    }
+  }
+}
+
+// ---- construction de la page -------------------------------------------
+const main = document.getElementById('main');
+const cells = [];
+const dpr = Math.min(2, window.devicePixelRatio || 1);
+let total = 0;
+
+for (const sec of SECTIONS) {
+  const s = document.createElement('section');
+  s.innerHTML = `<h2>${sec.title}</h2>`;
+  const grid = document.createElement('div'); grid.className = 'grid';
+  for (const item of sec.items) {
+    total++;
+    const pid = item.pid || item.pose;
+    const el = document.createElement('div'); el.className = 'cell';
+    const cv = document.createElement('canvas');
+    cv.width = 116 * dpr; cv.height = 116 * dpr;
+    const gg = cv.getContext('2d'); gg.scale(dpr, dpr);
+    el.appendChild(cv);
+    const l = document.createElement('div'); l.className = 'lbl'; l.textContent = item.label;
+    const p = document.createElement('div'); p.className = 'pid'; p.textContent = pid;
+    el.appendChild(l); el.appendChild(p);
+    el.addEventListener('click', () => openBig(item));
+    grid.appendChild(el);
+    cells.push({ gg, S: 116, item, el, hay: (item.label + ' ' + pid).toLowerCase() });
+  }
+  s.appendChild(grid); main.appendChild(s);
+}
+document.getElementById('count').textContent = total + ' emotes';
+
+// ---- boucle d'animation ------------------------------------------------
+let speed = 1, paused = false, base = performance.now(), acc = 0, lastNow = base;
+function loop(now) {
+  if (!paused) acc += (now - lastNow) / 1000 * speed;
+  lastNow = now;
+  const t = acc + 0.4;
+  for (const c of cells) {
+    if (c.el.classList.contains('hidden')) continue;
+    paint(c.gg, c.S, c.item, t);
+  }
+  if (bigItem) paint(bigG, 340, bigItem, t);
+  requestAnimationFrame(loop);
+}
+requestAnimationFrame(loop);
+
+// ---- contrôles --------------------------------------------------------
+const speedEl = document.getElementById('speed'), speedV = document.getElementById('speedv');
+speedEl.addEventListener('input', () => { speed = +speedEl.value; speedV.textContent = speed.toFixed(1).replace(/\.0$/, '') + 'x'; });
+const pauseB = document.getElementById('pause');
+pauseB.addEventListener('click', () => { paused = !paused; pauseB.textContent = paused ? '▶ Lecture' : '⏸ Pause'; });
+document.getElementById('filter').addEventListener('input', e => {
+  const q = e.target.value.trim().toLowerCase();
+  for (const c of cells) c.el.classList.toggle('hidden', q && !c.hay.includes(q));
+});
+
+// ---- overlay ----------------------------------------------------------
+const overlay = document.getElementById('overlay');
+const bigCv = document.getElementById('obig');
+bigCv.width = 340 * dpr; bigCv.height = 340 * dpr;
+const bigG = bigCv.getContext('2d'); bigG.scale(dpr, dpr);
+let bigItem = null;
+function openBig(item) {
+  bigItem = item;
+  document.getElementById('ott').textContent = item.label;
+  document.getElementById('opp').textContent = item.pid || item.pose;
+  document.getElementById('odd').textContent = item.d || '';
+  overlay.classList.add('show');
+}
+overlay.addEventListener('click', () => { overlay.classList.remove('show'); bigItem = null; });
+document.addEventListener('keydown', e => { if (e.key === 'Escape') { overlay.classList.remove('show'); bigItem = null; } });
+</script>
+</body>
+</html>

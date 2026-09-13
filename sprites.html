@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>PC Pet — sprites Discord</title>
+<style>
+  body { margin: 0; background: #313338; color: #dbdee1; font: 13px -apple-system, sans-serif; }
+  .wrap { display: flex; flex-wrap: wrap; gap: 10px; padding: 16px; }
+  .s { text-align: center; }
+  .s .row { display: flex; gap: 6px; align-items: center; background: #2b2d31; padding: 6px; border-radius: 8px; }
+  .s .row.light { background: #ffffff; }
+  .s canvas { width: 48px; height: 48px; image-rendering: auto; }
+  .s .big { width: 96px; height: 96px; }
+  .s .n { margin-top: 5px; font-family: ui-monospace, Menlo, monospace; font-size: 11px; color: #949ba4; }
+  h2 { padding: 4px 16px 0; font-size: 12px; letter-spacing: 1px; color: #949ba4; text-transform: uppercase; }
+</style>
+</head>
+<body>
+<h2>Aperçu (fond sombre · clair · ×2)</h2>
+<div class="wrap" id="wrap"></div>
+
+<script src="renderer/engine.js"></script>
+<script>
+const TINTS = {
+  _:      { bg:'12,13,16', off:'150,160,180,0.14', lit:'236,240,252', glow:'150,190,255,1' },
+  matrix: { bg:'5,14,7',   off:'70,200,110,0.16',  lit:'188,255,198', glow:'90,255,140,1' },
+  claude: { bg:'22,12,7',  off:'232,140,95,0.17',  lit:'255,210,180', glow:'245,135,80,1' },
+};
+const NEUTRAL_COS = { hat:'none', eyes:'none', mouth:'none', beard:'none', neck:'none' };
+
+// dessine le sprite sur un canvas carré `S` (fond disque opaque + LEDs + halo)
+function draw(gg, S, pose, opt) {
+  const tint = opt.tint, mode = opt.mode || 'day', t = opt.t || 0.4;
+  const layer = pose === 'rest' || pose.startsWith('scene:') ? 1 : 3;
+  clearBuf();
+  drawCreature({ layer, pose, phase: opt.phased ? (t % (opt.per || 2)) / (opt.per || 2) : 0,
+                 mode, decor: null, energy: 0.7, collapseStart: 0 }, t);
+
+  const T = TINTS[tint] || TINTS._;
+  const CELL = S / N, mid = S / 2, rDisc = S * 0.495;
+  gg.clearRect(0, 0, S, S);
+
+  // disque "appareil" opaque
+  gg.save();
+  gg.beginPath(); gg.arc(mid, mid, rDisc, 0, 7); gg.clip();
+  gg.fillStyle = `rgb(${T.bg})`;
+  gg.fillRect(0, 0, S, S);
+  // léger halo radial teinté
+  const rg = gg.createRadialGradient(mid, mid, rDisc * .2, mid, mid, rDisc);
+  rg.addColorStop(0, `rgba(${T.glow.replace(/,1$/, '')},0.10)`);
+  rg.addColorStop(1, 'rgba(0,0,0,0)');
+  gg.fillStyle = rg; gg.fillRect(0, 0, S, S);
+
+  for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) {
+    if (Math.hypot(x - CENTER, y - CENTER) > R) continue;
+    const v = buf[idx(x, y)];
+    const cx = x * CELL + CELL / 2, cy = y * CELL + CELL / 2;
+    gg.beginPath(); gg.fillStyle = `rgba(${T.off})`;
+    gg.arc(cx, cy, CELL * .30, 0, 7); gg.fill();
+    if (v > .02) {
+      const q = Math.round(v * 8) / 8;
+      gg.beginPath();
+      gg.fillStyle = `rgba(${T.lit},${.30 + q * .70})`;
+      gg.shadowColor = `rgba(${T.glow})`;
+      gg.shadowBlur = CELL * 1.0 * q;
+      gg.arc(cx, cy, CELL * .38, 0, 7); gg.fill();
+      gg.shadowBlur = 0;
+    }
+  }
+  gg.restore();
+  // liseré subtil
+  gg.beginPath(); gg.arc(mid, mid, rDisc - 0.5, 0, 7);
+  gg.strokeStyle = `rgba(${T.lit},0.10)`; gg.lineWidth = 1.5; gg.stroke();
+}
+
+// ---- catalogue des sprites -------------------------------------------
+const MANIFEST = [
+  { name:'pcpet_hi',       pose:'claude',      tint:'claude', t:0.4 },
+  { name:'pcpet_happy',    pose:'happy',       t:0.09 },
+  { name:'pcpet_love',     pose:'love',        t:0.07 },
+  { name:'pcpet_wave',     pose:'greet',       t:0.125 },
+  { name:'pcpet_sad',      pose:'sad',         t:0.6 },
+  { name:'pcpet_shook',    pose:'alert',       t:0.09 },
+  { name:'pcpet_dizzy',    pose:'dizzy',       t:0.55, anim:{ per:2.0, dt:0.09, n:16 } },
+  { name:'pcpet_bored',    pose:'bored',       t:1.2 },
+  { name:'pcpet_sleep',    pose:'zzz',         layer:2, phased:true, per:3.2, t:1.0 },
+  { name:'pcpet_yawn',     pose:'yawn',        layer:2, phased:true, per:2.8, t:1.3 },
+  { name:'pcpet_panic',    pose:'panic',       t:0.3 },
+  { name:'pcpet_grump',    pose:'grumpywake',  t:0.4 },
+  { name:'pcpet_vibe',     pose:'beatbop',     t:0.3, anim:{ per:2.0, dt:0.08, n:22 } },
+  { name:'pcpet_hmm',      pose:'curious',     t:0.9 },
+  { name:'pcpet_cozy',     pose:'chill',       t:0.7 },
+  { name:'pcpet_star',     pose:'creative',    t:0.6 },
+  { name:'pcpet_hack',     pose:'matrix',      tint:'matrix', t:0.6, anim:{ per:2.2, dt:0.08, n:22 } },
+  { name:'pcpet_thinking', pose:'claudethink', tint:'claude', t:1.0, anim:{ per:2.0, dt:0.09, n:20 } },
+  { name:'pcpet_canthear', pose:'mute',        t:0.4 },
+  { name:'pcpet_lowbat',   pose:'lowbat',      t:0.5 },
+];
+
+// ---- API pour l'export (Electron) -----------------------------------
+window.SPRITE_API = {
+  manifest: MANIFEST,
+  still(item, S) {
+    const c = document.createElement('canvas'); c.width = c.height = S;
+    draw(c.getContext('2d'), S, item.pose, item);
+    return c.toDataURL('image/png');
+  },
+  frames(item, S) {
+    const a = item.anim, out = [];
+    const base = (item.t || 0);
+    for (let i = 0; i < a.n; i++) {
+      const c = document.createElement('canvas'); c.width = c.height = S;
+      draw(c.getContext('2d'), S, item.pose, { ...item, t: base + i * a.dt });
+      out.push(c.toDataURL('image/png'));
+    }
+    return out;
+  },
+};
+
+// ---- aperçu visuel --------------------------------------------------
+const wrap = document.getElementById('wrap');
+for (const item of MANIFEST) {
+  const d = document.createElement('div'); d.className = 's';
+  const row = document.createElement('div'); row.className = 'row';
+  const rowL = document.createElement('div'); row.className = 'row'; rowL.className = 'row light';
+  for (const [parent, S, cls] of [[row, 48, ''], [rowL, 48, ''], [row, 96, 'big']]) {
+    const cv = document.createElement('canvas');
+    cv.width = S * 2; cv.height = S * 2; if (cls) cv.className = cls;
+    const gg = cv.getContext('2d'); gg.scale(2, 2);
+    draw(gg, S, item.pose, item);
+    parent.appendChild(cv);
+  }
+  const holder = document.createElement('div'); holder.style.display = 'flex'; holder.style.gap = '6px';
+  holder.append(row, rowL);
+  const n = document.createElement('div'); n.className = 'n'; n.textContent = ':' + item.name + ':' + (item.anim ? ' 🎞' : '');
+  d.append(holder, n); wrap.appendChild(d);
+}
+</script>
+</body>
+</html>

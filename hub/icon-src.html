@@ -1,0 +1,63 @@
+<!doctype html><html><head><meta charset="utf-8"><title>icon</title></head>
+<body style="margin:0;background:#111">
+<canvas id="c" width="1024" height="1024"></canvas>
+<script src="../renderer/engine.js"></script>
+<script>
+const S = 1024, g = document.getElementById('c').getContext('2d');
+
+// tuile arrondie style macOS
+function roundRect(x, y, w, h, r) {
+  g.beginPath();
+  g.moveTo(x + r, y);
+  g.arcTo(x + w, y, x + w, y + h, r);
+  g.arcTo(x + w, y + h, x, y + h, r);
+  g.arcTo(x, y + h, x, y, r);
+  g.arcTo(x, y, x + w, y, r);
+  g.closePath();
+}
+
+const pad = S * 0.085, tile = S - pad * 2, rad = tile * 0.235;
+g.clearRect(0, 0, S, S);
+
+// ombre douce
+g.save();
+g.shadowColor = 'rgba(0,0,0,0.35)';
+g.shadowBlur = S * 0.05;
+g.shadowOffsetY = S * 0.02;
+roundRect(pad, pad, tile, tile, rad);
+const bg = g.createLinearGradient(0, pad, 0, pad + tile);
+bg.addColorStop(0, '#1b1d22');
+bg.addColorStop(1, '#0c0d10');
+g.fillStyle = bg; g.fill();
+g.restore();
+
+// liseré
+roundRect(pad + 2, pad + 2, tile - 4, tile - 4, rad - 2);
+g.strokeStyle = 'rgba(255,255,255,0.06)'; g.lineWidth = 3; g.stroke();
+
+// visage LED (pose contente, teinte chaude Claude)
+clearBuf();
+drawCreature({ layer: 3, pose: 'love', phase: 0, mode: 'day', decor: null, energy: 0.7, collapseStart: 0 }, 0.5);
+
+const face = tile * 0.82, ox = (S - face) / 2, oy = (S - face) / 2;
+const CELL = face / N;
+const glow = '245,150,90';
+for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) {
+  if (Math.hypot(x - CENTER, y - CENTER) > R) continue;
+  const v = buf[idx(x, y)];
+  const cx = ox + x * CELL + CELL / 2, cy = oy + y * CELL + CELL / 2;
+  g.beginPath(); g.fillStyle = 'rgba(240,150,100,0.13)';
+  g.arc(cx, cy, CELL * 0.30, 0, 7); g.fill();
+  if (v > 0.02) {
+    const q = Math.round(v * 8) / 8;
+    g.beginPath();
+    g.fillStyle = `rgba(255,216,188,${0.42 + q * 0.58})`;
+    g.shadowColor = `rgba(${glow},0.9)`;
+    g.shadowBlur = CELL * 0.75 * q;
+    g.arc(cx, cy, CELL * 0.42, 0, 7); g.fill();
+    g.shadowBlur = 0;
+  }
+}
+
+window.ICON = document.getElementById('c').toDataURL('image/png');
+</script></body></html>
