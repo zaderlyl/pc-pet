@@ -713,6 +713,18 @@ function drawCreature(s, t) {
         extras.push({ kind:'bars', ph: t });
         break;
       }
+      // ---- Adobe : l'artiste outillé — jongle entre les outils de la suite ----
+      case 'adobe': {           // base : dessine, concentré, langue tirée
+        eyeStyle = 'squint'; mouth = 'cat';
+        lookH = Math.sin(t * 2) * 0.8;
+        tilt = Math.sin(t * 0.5) * 0.04;
+        break;
+      }
+      case 'adobeswatch': {     // choisit une couleur dans le nuancier
+        eyeStyle = 'dot'; mouth = 'line';
+        extras.push({ kind:'popswatch', ph: t });
+        break;
+      }
       // ---- Git / GitHub : le gardien de l'histoire — il archive, surveille le
       //      graphe des branches, valide chaque instantané avec soin ----
       case 'git': {             // base : posé, il regarde le graphe des commits défiler

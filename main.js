@@ -34,7 +34,7 @@ for (const [cat, apps] of Object.entries(APP_CATEGORIES)) for (const a of apps) 
 // En écran scindé, `frontApp()` alterne entre les 2 fenêtres → le compagnon
 // changeait d'identité sans arrêt. On garde plutôt l'identité "la plus logique"
 // vue dans les 5 dernières secondes (ex. VS Code + Chrome → VS Code).
-const IDENTITY_PRIORITY = ['vscode', 'git', 'claude', 'affinity', 'figma', 'canva', 'notion', 'gemini', 'chatgpt', 'spotify', 'discord', 'youtube'];
+const IDENTITY_PRIORITY = ['vscode', 'git', 'claude', 'affinity', 'figma', 'canva', 'adobe', 'notion', 'gemini', 'chatgpt', 'spotify', 'discord', 'youtube'];
 const CAT_PRIORITY = ['design', 'code', 'terminal', 'chat', 'game', 'media', 'web'];
 const SMOOTH_MS = 5000;
 let seenApps = [];   // { tool, cat, ts }
@@ -91,6 +91,9 @@ function frontTitle() {
 }
 
 const GIT_APPS = ['GitHub Desktop', 'Tower', 'Fork', 'Sourcetree', 'GitKraken', 'Sublime Merge'];
+const ADOBE_APPS = ['Adobe Photoshop', 'Adobe Illustrator', 'Adobe XD', 'Adobe InDesign',
+  'Adobe Premiere Pro', 'Adobe After Effects', 'Adobe Lightroom', 'Adobe Lightroom Classic',
+  'Adobe Acrobat', 'Adobe Acrobat Pro'];
 
 function aiToolOf(appName, url, title) {
   if (appName === 'Claude') return 'claude';
@@ -103,6 +106,7 @@ function aiToolOf(appName, url, title) {
   if (appName === 'Spotify') return 'spotify';
   if (/Affinity/i.test(appName || '')) return 'affinity';
   if (/^Canva\b/i.test(appName || '')) return 'canva';
+  if (/^Adobe\b/i.test(appName || '')) return 'adobe';   // toute la suite -> une seule identité
   if (GIT_APPS.includes(appName)) return 'git';
   if (url) {
     try {
@@ -142,6 +146,7 @@ const LOCK_APPS = [
   { tool: 'affinity', names: ['Affinity Photo', 'Affinity Designer', 'Affinity Publisher'] },
   { tool: 'figma', names: ['Figma'] },
   { tool: 'canva', names: ['Canva'] },
+  { tool: 'adobe', names: ADOBE_APPS },
   { tool: 'notion', names: ['Notion'] },
   { tool: 'chatgpt', names: ['ChatGPT'] },
   { tool: 'spotify', names: ['Spotify'] },

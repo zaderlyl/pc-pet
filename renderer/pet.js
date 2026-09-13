@@ -39,6 +39,7 @@ const Brain = {
   giScene: { name: null, start: 0, dur: 0, next: 0 },  // Git : commit / branch / diff / push
   figScene: { name: null, start: 0, dur: 0, next: 0 }, // Figma : frames qui s'organisent
   noScene: { name: null, start: 0, dur: 0, next: 0 },  // Notion : coche une tâche
+  adoScene: { name: null, start: 0, dur: 0, next: 0 }, // Adobe : nuancier
   reactions: [],
   idle: { anim: null, start: 0, dur: 0, next: 0 },
   scene: { name: null, start: 0, dur: 0, next: 0 },
@@ -354,6 +355,24 @@ const Brain = {
     if (now > this.noScene.next) this.scheduleNoScene(now);
   },
 
+  // ---- Adobe : l'artiste outillé (choisit une couleur au nuancier) ----
+  scheduleAdoScene(now) {
+    if (Math.random() < 0.5) {
+      this.adoScene = { name: 'swatch', start: now, dur: 2400, next: now + 2400 + rnd(3500, 7000) };
+    } else {
+      this.adoScene = { name: null, start: now, dur: 0, next: now + rnd(5000, 9000) };
+    }
+  },
+  tickAdoScene(now) {
+    if (this.aiTool !== 'adobe' || this.reactions.length) {
+      this.adoScene = { name: null, start: 0, dur: 0, next: 0 };
+      return;
+    }
+    if (this.adoScene.next === 0) { this.scheduleAdoScene(now); return; }
+    if (this.adoScene.name && now - this.adoScene.start > this.adoScene.dur) this.adoScene.name = null;
+    if (now > this.adoScene.next) this.scheduleAdoScene(now);
+  },
+
   // ---- VS Code : l'ingénieur méthodique (autocomplete → lint → debug → save) ----
   scheduleVScene(now) {
     if (Math.random() < 0.62) {
@@ -426,6 +445,7 @@ const Brain = {
     this.tickGiScene(now);
     this.tickFigScene(now);
     this.tickNoScene(now);
+    this.tickAdoScene(now);
 
     const idl = this.idleSec;
     const batLow = this.battery && !this.battery.charging && this.battery.level < 0.15;
@@ -484,6 +504,9 @@ const Brain = {
       }
       else if (this.aiTool === 'notion') {
         pose = this.noScene.name ? 'notion' + this.noScene.name : 'notion';
+      }
+      else if (this.aiTool === 'adobe') {
+        pose = this.adoScene.name ? 'adobe' + this.adoScene.name : 'adobe';
       }
       else pose = this.aiTool;
     } else if (this.musicPlaying) {
@@ -545,13 +568,14 @@ const POSE_TINT = {
   figma: 'figma', figmaframes: 'figma',
   notion: 'notion', notioncheck: 'notion',
   spotify: 'spotify',
+  adobe: 'adobe', adobeswatch: 'adobe',
 };
 
 // nom de la facette affiché au-dessus du compagnon
 const IDENTITY_NAME = {
   claude: 'Laudi', vscode: 'Codi', chatgpt: 'Gepti', gemini: 'Gemi',
   affinity: 'Arti', discord: 'Cordi', youtube: 'Tubi', canva: 'Canvi', git: 'Giti',
-  figma: 'Figmi', notion: 'Noti', spotify: 'Spoti',
+  figma: 'Figmi', notion: 'Noti', spotify: 'Spoti', adobe: 'Adobi',
 };
 const ACTIVITY_NAME = {
   code: 'Hacki', terminal: 'Hacki', web: 'Webi', design: 'Desi',
@@ -579,6 +603,8 @@ const TINTS = {
   notion:   { bg: '17,17,19',  off: '215,215,218,0.10', lit: '238,238,240', glow: '205,205,210,0.6' },
   // Spotify : vert #1DB954
   spotify:  { bg: '6,20,12',   off: '80,220,130,0.12',  lit: '190,255,210', glow: '29,185,84,0.95' },
+  // Adobe (suite) : rouge-magenta Creative Cloud
+  adobe:    { bg: '24,6,16',   off: '255,90,150,0.13',  lit: '255,205,222', glow: '230,20,110,0.85' },
 };
 
 const cv = document.getElementById('pet');
