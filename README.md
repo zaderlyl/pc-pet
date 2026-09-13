@@ -8,6 +8,8 @@ transparente toujours au-dessus, qu'on attrape et pose où on veut.
 > Les deux évoluent indépendamment ; les ajouts d'un côté sont reportés
 > manuellement de l'autre quand ça a du sens.
 
+Nouveautés → [CHANGELOG.md](CHANGELOG.md).
+
 ## Lancer
 
 ```bash
